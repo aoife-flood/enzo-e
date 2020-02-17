@@ -116,32 +116,6 @@
 // #define DEBUG_FIELD_MESSAGE
 // #define DEBUG_PROLONG
 
-// #define TRACE_FIELD
-
-
-#ifdef TRACE_FIELD
-#  undef TRACE_FIELD
-#  define TRACE_FIELD(BLOCK,MSG,ID)					\
-  {									\
-    Field field = BLOCK->data()->field();				\
-    double sum_abs=0.0;							\
-    int count = 0;							\
-    auto X = (enzo_float*) field.values(ID);				\
-    for (int iz=gz_; iz<mz_-gz_; iz++) {				\
-      for (int iy=gy_; iy<my_-gy_; iy++) {				\
-	for (int ix=gx_; ix<mx_-gx_; ix++) {				\
-	  int i = ix + mx_*(iy + my_*iz);				\
-	  sum_abs+=std::abs(X[i]);					\
-	  count++;							\
-	}								\
-      }									\
-    }									\
-    CkPrintf ("%s:%d %s TRACE_FIELD %d %s %lg count %d\n",				\
-	      __FILE__,__LINE__,BLOCK->name().c_str(),ID,MSG,sum_abs,count);	\
-  }
-#else
-#  define TRACE_FIELD(BLOCK,MSG,ID) /* ... */
-#endif
 
 #define AFTER_CYCLE(BLOCK,CYCLE) (BLOCK->cycle() >= CYCLE)
 #define CYCLE 000
@@ -322,20 +296,17 @@ EnzoSolverMg0::EnzoSolverMg0
 {
   // Initialize temporary fields
 
-  FieldDescr * field_descr = cello::field_descr();
+  ir_ = cello::field_descr()->insert_temporary();
+  ic_ = cello::field_descr()->insert_temporary();
 
-  ir_ = field_descr->insert_temporary();
-  ic_ = field_descr->insert_temporary();
 
-  /// Initialize default Refresh
+  Refresh & refresh = this->refresh_post();
+  cello::simulation()->new_refresh_set_name(ir_post_,name);
 
-  add_refresh(4,0,neighbor_level,sync_barrier,
-	      enzo_sync_id_solver_mg0);
-
-  refresh(0)->add_field (ix_);
-  refresh(0)->add_field (ir_);
-  refresh(0)->add_field (ic_);
-
+  refresh.add_field (ix_);  // NOTE: ix_ set in Solver::Solver()
+  refresh.add_field (ir_);
+  refresh.add_field (ic_);
+  
   ScalarDescr * scalar_descr_int  = cello::scalar_descr_int();
   i_iter_  = scalar_descr_int ->new_value(name + ":iter");
   
@@ -368,8 +339,6 @@ void EnzoSolverMg0::apply ( std::shared_ptr<Matrix> A, Block * block) throw()
 
   Solver::begin_(block);
 
-  TRACE_FIELD(block,"apply B",ib_);
-
   A_ = A;
 
   allocate_temporary_(block);
@@ -398,13 +367,13 @@ void EnzoSolverMg0::apply ( std::shared_ptr<Matrix> A, Block * block) throw()
   
   Sync * sync_restrict = psync_restrict(block);
 
-  sync_restrict->set_stop(NUM_CHILDREN(cello::rank()));
   sync_restrict->reset();
+  sync_restrict->set_stop(cello::num_children());
   
   Sync * sync_prolong = psync_prolong(block);
 
-  sync_prolong->set_stop(2); // self and parent
   sync_prolong->reset();
+  sync_prolong->set_stop(2); // self and parent
 
 #ifdef DEBUG_PROLONG
   if (AFTER_CYCLE(enzo_block,CYCLE))
@@ -1313,6 +1282,9 @@ void EnzoBlock::p_solver_mg0_last_smooth()
 
 FieldMsg * EnzoSolverMg0::pack_residual_(EnzoBlock * enzo_block) throw()
 {
+#ifdef DEBUG_SOLVER_MG0  
+  CkPrintf ("%s DEBUG_SOLVER_MG0 pack_residual\n",enzo_block->name().c_str());
+#endif  
   Index index        = enzo_block->index();
   const  int level   = index.level();  
   // copy face data to FieldFace

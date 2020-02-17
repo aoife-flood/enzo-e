@@ -13,6 +13,8 @@
 #include "cello.hpp"
 #include "enzo.hpp"
 
+// #define DEBUG_COLLAPSE
+
 #define FORTRAN_NAME(NAME) NAME##_
 
 extern "C" void  FORTRAN_NAME(dep_grid_cic)
@@ -35,14 +37,14 @@ EnzoMethodPmDeposit::EnzoMethodPmDeposit ( double alpha)
 {
   // Initialize default Refresh object
 
-  const int ir = add_refresh(4,cello::rank()-1,neighbor_leaf,sync_neighbor,
- 			     enzo_sync_id_method_pm_deposit);
- 
-  refresh(ir)->add_field("density");
-  refresh(ir)->add_field("velocity_x");
-  refresh(ir)->add_field("velocity_y");
-  refresh(ir)->add_field("velocity_z");
-			     
+
+  Refresh & refresh = new_refresh(ir_post_);
+  cello::simulation()->new_refresh_set_name(ir_post_,name());
+  
+  refresh.add_field("density");
+  refresh.add_field("velocity_x");
+  refresh.add_field("velocity_y");
+  refresh.add_field("velocity_z");
 }
 
 //----------------------------------------------------------------------
@@ -143,7 +145,11 @@ void EnzoMethodPmDeposit::compute ( Block * block) throw()
 
     int level = block->level();
 
-    dens *= std::pow(2.0,rank*level);
+    // Required for Cosmology ("mass" is mass)
+    // Not for Collapse ("mass" is density)
+    if (cosmology) {
+      dens *= std::pow(2.0,rank*level);
+    }
 
     // Accumulated single velocity array for Baryon deposit
 
@@ -193,7 +199,11 @@ void EnzoMethodPmDeposit::compute ( Block * block) throw()
 	enzo_float * vxa = (enzo_float *)particle.attribute_array (it,ia_vx,ib);
 	enzo_float * vya = (enzo_float *)particle.attribute_array (it,ia_vy,ib);
 
-	const int dp =  particle.stride(it,ia_x);
+#ifdef DEBUG_COLLAPSE
+        CkPrintf ("DEBUG_COLLAPSE vxa[0] = %lg\n",vxa[0]);
+#endif            
+
+        const int dp =  particle.stride(it,ia_x);
 	const int dv =  particle.stride(it,ia_vx);
 
 	for (int ip=0; ip<np; ip++) {
@@ -252,14 +262,17 @@ void EnzoMethodPmDeposit::compute ( Block * block) throw()
 	const int ia_vy = particle.attribute_index(it,"vy");
 	const int ia_vz = particle.attribute_index(it,"vz");
 
-	enzo_float * xa  = (enzo_float *) particle.attribute_array (it,ia_x,ib);
-	enzo_float * ya  = (enzo_float *) particle.attribute_array (it,ia_y,ib);
-	enzo_float * za  = (enzo_float *) particle.attribute_array (it,ia_z,ib);
+	enzo_float * xa = (enzo_float *)particle.attribute_array (it,ia_x,ib);
+	enzo_float * ya = (enzo_float *)particle.attribute_array (it,ia_y,ib);
+	enzo_float * za = (enzo_float *)particle.attribute_array (it,ia_z,ib);
 
 	// Particle batch velocities
-	enzo_float * vxa = (enzo_float *) particle.attribute_array (it,ia_vx,ib);
-	enzo_float * vya = (enzo_float *) particle.attribute_array (it,ia_vy,ib);
-	enzo_float * vza = (enzo_float *) particle.attribute_array (it,ia_vz,ib);
+	enzo_float * vxa = (enzo_float *)particle.attribute_array (it,ia_vx,ib);
+	enzo_float * vya = (enzo_float *)particle.attribute_array (it,ia_vy,ib);
+	enzo_float * vza = (enzo_float *)particle.attribute_array (it,ia_vz,ib);
+#ifdef DEBUG_COLLAPSE
+        CkPrintf ("DEBUG_COLLAPSE vxa[0] = %lg\n",vxa[0]);
+#endif            
 
 	const int dp =  particle.stride(it,ia_x);
 	const int dv =  particle.stride(it,ia_vx);

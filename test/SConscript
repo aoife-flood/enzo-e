@@ -1,9 +1,11 @@
 Import('env')
 Import('parallel_run')
+Import('parallel_arg')
 Import('serial_run')
 Import('ip_charm')
 Import('bin_path')
 Import('test_path')
+Import('prec')
 
 import os
 
@@ -19,6 +21,7 @@ env['RMIN'] = 'rm -f parameters.out parameters.libconfig'
 
 
 charm_args = os.getenv('CHARM_ARGS','')
+if (charm_args != ""): parallel_arg = charm_args
 
 # Define a test for running unit tests
 
@@ -26,7 +29,8 @@ date_cmd = 'echo "-------------------"; date +"%Y-%m-%d %H:%M:%S";'
 hdf5_to_png  = Builder(action = 'test/cello-h5topng.sh $ARGS; mv *.png test');
 copy_bin     = Builder(action = "cp $SOURCE $ARGS");
 run_serial   = Builder(action = "$RMIN; echo $TARGET > test/STATUS;" + date_cmd + serial_run   +  "$SOURCE $ARGS> $TARGET 2>&1; $CPIN; $COPY")
-run_parallel = Builder(action = "$RMIN; echo $TARGET > test/STATUS;" + date_cmd + parallel_run + " $SOURCE " + charm_args + " $ARGS " + " > $TARGET 2>&1; $CPIN; $COPY")
+run_parallel = Builder(action = "$RMIN; echo $TARGET > test/STATUS;" + date_cmd + parallel_run + " $SOURCE " + parallel_arg + " $ARGS " + " > $TARGET 2>&1; $CPIN; $COPY")
+
 make_movie   = Builder(action = "png2swf -r 5 -o $TARGET ${ARGS} ")
 png_to_gif   = Builder(action = "convert -delay 5 -loop 0 ${ARGS} $TARGET ")
 
@@ -53,7 +57,9 @@ env.RunSerial('test_Field.unit',     bin_path + '/test_Field')
 env.RunSerial('test_FieldFace.unit', bin_path + '/test_FieldFace')
 env.RunSerial('test_ItIndex.unit',   bin_path + '/test_ItIndex')
 env.RunSerial('test_Grouping.unit',  bin_path + '/test_Grouping')
-env.RunSerial('test_Particle.unit',      bin_path + '/test_Particle')
+env.RunSerial('test_Particle.unit',  bin_path + '/test_Particle')
+env.RunSerial('test_FaceFluxes.unit',bin_path + '/test_FaceFluxes')
+env.RunSerial('test_FluxData.unit',  bin_path + '/test_FluxData')
 #----------------------------------------------------------------------
 # DISK COMPONENT          
 #----------------------------------------------------------------------
@@ -116,7 +122,8 @@ env.RunSerial('test_Memory.unit',      bin_path + '/test_Memory')
 # MESH COMPONENT          
 #----------------------------------------------------------------------
 env.RunSerial('test_Data.unit',     bin_path + '/test_Data')
-env.RunSerial('test_Index.unit',     bin_path + '/test_Index')
+env.RunSerial('test_Index.unit',    bin_path + '/test_Index')
+env.RunSerial('test_Face.unit',     bin_path + '/test_Face')
 Clean(env_mv_out.RunSerial('test_Tree.unit', bin_path + '/test_Tree'),
       ['#/test_Tree.unit.in',
        '#/test_tree_1-initial.png',	
@@ -173,6 +180,12 @@ env.RunSerial('test_Value.unit',   bin_path + '/test_Value')
 #----------------------------------------------------------------------
 
 env.RunSerial('test_EnzoUnits.unit',bin_path + '/test_EnzoUnits')
+
+#----------------------------------------------------------------------
+# SYNC COMPONENT        
+#----------------------------------------------------------------------
+
+env.RunSerial('test_Sync.unit',bin_path + '/test_Sync')
 
 #----------------------------------------------------------------------
 # CELLO
@@ -261,29 +274,38 @@ env.PngToGif ("method_gravity_cg-8.gif", "test_method_gravity_cg-8.unit", \
 # MethodCosmology tests
 #----------------------------------------------------------------------
 
-# serial
-Clean(env_mv_out.RunSerial ('test_method_cosmology-1.unit',bin_path + '/enzo-p', 
-		ARGS='input/method_cosmology-1.in'),
-      [Glob('#/' + test_path + '/Dir_COSMO-1'),
-       Glob('#/' + test_path + '/Dir_COSMO-1')])
+Clean(env_mv_out.RunParallel ('test_cosmo-cg.unit',bin_path + '/enzo-p', 
+		ARGS='input/test_cosmo-cg.in'),
+      [Glob('#/' + test_path + '/Dir_COSMO_CG_*'),
+       Glob('#/' + test_path + '/Dir_COSMO_CG_*')])
+Clean(env_mv_out.RunParallel ('test_cosmo-bcg.unit',bin_path + '/enzo-p', 
+		ARGS='input/test_cosmo-bcg.in'),
+      [Glob('#/' + test_path + '/Dir_COSMO_BCG_*'),
+       Glob('#/' + test_path + '/Dir_COSMO_BCG_*')])
+Clean(env_mv_out.RunParallel ('test_cosmo-mg.unit',bin_path + '/enzo-p', 
+		ARGS='input/test_cosmo-mg.in'),
+      [Glob('#/' + test_path + '/Dir_COSMO_MG_*'),
+       Glob('#/' + test_path + '/Dir_COSMO_MG_*')])
+Clean(env_mv_out.RunParallel ('test_cosmo-ddmg.unit',bin_path + '/enzo-p', 
+		ARGS='input/test_cosmo-ddmg.in'),
+      [Glob('#/' + test_path + '/Dir_COSMO_DDMG_*'),
+       Glob('#/' + test_path + '/Dir_COSMO_DDMG_*')])
 
-#env.MakeMovie ("cosmo-111.swf", "test_method_cosmology-1.unit", \
-#                ARGS= test_path + "/cosmo-111*.png");
-#env.PngToGif ("cosmo-111.gif", "test_cosmo-111.unit", \
-#                ARGS= test_path + "/cosmo-111*.png");
+#----------------------------------------------------------------------
+# MethodCollapse tests
+#----------------------------------------------------------------------
 
-
-# parallel
-
-Clean(env_mv_out.RunParallel ('test_method_cosmology-8.unit',bin_path + '/enzo-p', 
-		ARGS='input/method_cosmology-8.in'),
-      [Glob('#/' + test_path + '/Dir_COSMO-8'),
-      Glob('#/' + test_path + '/Dir_COSMO-8')])
-
-#env.MakeMovie ("cosmo-222.swf", "test_method_cosmology-8.unit", \
-#                ARGS= test_path + "/cosmo-222-*.png");
-#env.PngToGif ("cosmo-222.gif", "test_method_cosmology-8.unit", \
-#                ARGS= test_path + "/cosmo-222-*.png");
+if (prec == "double"):
+    Clean(env_mv_out.RunParallel ('test_collapse-bcg2d.unit',
+                                  bin_path + '/enzo-p', 
+		                  ARGS='input/test_collapse-bcg2d.in'),
+          [Glob('#/' + test_path + '/Dir_COLLAPSE_BCG2D_*'),
+           Glob('#/' + test_path + '/Dir_COLLAPSE_BCG2D_*')])
+    Clean(env_mv_out.RunParallel ('test_collapse-bcg3d.unit',
+                                  bin_path + '/enzo-p', 
+		                  ARGS='input/test_collapse-bcg3d.in'),
+          [Glob('#/' + test_path + '/Dir_COLLAPSE_BCG3D_*'),
+           Glob('#/' + test_path + '/Dir_COLLAPSE_BCG3D_*')])
 
 #----------------------------------------------------------------------
 # MethodHeat tests
@@ -406,7 +428,7 @@ Clean(env_mv_out.RunSerial ('test_method_ppml-test-1.unit',bin_path + '/enzo-p',
                             ARGS='input/method_ppml-test-1.in'),
       [Glob('#/' + test_path + '/PPML1_*')])
 
-Clean(env_mv_out.RunSerial ('test_method_ppml-test-8.unit',bin_path + '/enzo-p',
+Clean(env_mv_out.RunParallel ('test_method_ppml-test-8.unit',bin_path + '/enzo-p',
                             ARGS='input/method_ppml-test-8.in'),
       [Glob('#/' + test_path + '/PPML8_*')])
 
