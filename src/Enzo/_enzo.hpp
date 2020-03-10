@@ -222,6 +222,7 @@ extern "C" {
 #include "enzo_EnzoInitialSedovRandom.hpp"
 #include "enzo_EnzoInitialSoup.hpp"
 #include "enzo_EnzoInitialTurbulence.hpp"
+#include "enzo_EnzoInitialBurkertBodenheimer.hpp"
 
 #include "enzo_EnzoRefineShock.hpp"
 #include "enzo_EnzoRefineParticleMass.hpp"

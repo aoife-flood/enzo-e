@@ -82,6 +82,12 @@ EnzoConfig::EnzoConfig() throw ()
   initial_pm_field(""),
   initial_pm_mpp(0.0),
   initial_pm_level(0),
+  // EnzoInitialBurkertBodenheimer
+  initial_burkertbodenheimer_rank(0),
+  initial_burkertbodenheimer_radius_relative(0.0),
+  initial_burkertbodenheimer_particle_ratio(0.0),
+  initial_burkertbodenheimer_mass(0.0),
+  initial_burkertbodenheimer_temperature(0.0),
   // EnzoInitialSedov[23]
   initial_sedov_rank(0),
   initial_sedov_radius_relative(0.0),
@@ -282,6 +288,13 @@ void EnzoConfig::pup (PUP::er &p)
   p | initial_pm_field;
   p | initial_pm_mpp;
   p | initial_pm_level;
+
+  p | initial_burkertbodenheimer_rank;
+  PUParray(p,initial_burkertbodenheimer_array,3);
+  p | initial_burkertbodenheimer_radius_relative;
+  p | initial_burkertbodenheimer_particle_ratio;
+  p | initial_burkertbodenheimer_mass;
+  p | initial_burkertbodenheimer_temperature;
 
   p | initial_soup_rank;
   p | initial_soup_file;
@@ -497,6 +510,26 @@ void EnzoConfig::read(Parameters * p) throw()
   initial_pm_field        = p->value_string  ("Initial:pm:field","density");
   initial_pm_mpp          = p->value_float   ("Initial:pm:mpp",-1.0);
   initial_pm_level        = p->value_integer ("Initial:pm:level",-1);
+
+  // Burkert Bodenheimer initialization
+
+  initial_burkertbodenheimer_rank =  p->value_integer("Initial:burkertbodenheimer:rank",0);
+  for (int i=0; i<initial_burkertbodenheimer_rank; i++) {
+    initial_burkertbodenheimer_array[i] =
+      p->list_value_integer (i,"Initial:burkertbodenheimer:array",1);
+  }
+  for (int i=initial_burkertbodenheimer_rank; i<3; i++) {
+    initial_burkertbodenheimer_array[i] = 1;
+  }
+  initial_burkertbodenheimer_radius_relative =
+    p->value_float("Initial:burkertbodenheimer:radius_relative",0.1);
+  initial_burkertbodenheimer_particle_ratio =
+    p->value_float("Initial:burkertbodenheimer:particle_ratio",0.0);
+  initial_burkertbodenheimer_mass =
+    p->value_float("Initial:burkertbodenheimer:mass",cello::mass_solar);
+  initial_burkertbodenheimer_temperature =
+    p->value_float("Initial:burkertbodenheimer:temperature",10.0);
+
 
   field_gamma = p->value_float ("Field:gamma",5.0/3.0);
 

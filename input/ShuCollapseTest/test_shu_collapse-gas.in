@@ -1,0 +1,19 @@
+include "input/ShuCollapseTest/collapse_isothermal.incl"
+include "input/ShuCollapseTest/collapse-output.incl"
+Output {
+   #ax { dir = [ "Dir_Collapse-GAS-DD2_%04d", "cycle" ]; schedule { step = 10; } }
+   #mesh { dir = [ "Dir_Collapse-GAS-DD2_%04d", "cycle" ]; schedule { step = 10; }  }
+   #po { dir = [ "Dir_Collapse-GAS-DD2_%04d", "cycle" ]; schedule { step = 10; }  }
+   #de { dir = [ "Dir_Collapse-GAS-DD2_%04d", "cycle" ]; schedule { step = 10; }  }
+   data { dir = [ "Dir_Collapse-GAS-DD2_%04d", "cycle" ]; schedule { step = 10; }  }
+   list = ["ax","po","de","mesh", "data"];
+}
+ Method {
+     list = [ "ppm", "pm_deposit", "gravity", "pm_update" ];
+ }
+
+include "input/ShuCollapseTest/collapse-adapt-gas-2d.incl"
+include "input/ShuCollapseTest/shu-collapse-problem.incl"
+include "input/ShuCollapseTest/collapse-solver-dd.incl"
+
+

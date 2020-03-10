@@ -113,13 +113,19 @@ void EnzoInitialCollapse::enforce_block
   const double rx = (dxp - dxm) * radius_relative_ / array_[0] ;
   const double ry = (dyp - dym) * radius_relative_ / array_[1] ;
   const double rz = (dzp - dzm) * radius_relative_ / array_[2] ;
-
+  
   const double rx2i = 1.0/(rx*rx);
   const double ry2i = 1.0/(ry*ry);
   const double rz2i = 1.0/(rz*rz);
   
-  const double density = mass_ / (4.0/3.0*(cello::pi)*rx*ry*rz);
+  const double density = 3.82e-18; 3.82e-12; //mass_ / (4.0/3.0*(cello::pi)*rx*ry*rz);
 
+  printf("%s: Density = %e\n", __FUNCTION__, density);
+  printf("%s: mass = %e\n", __FUNCTION__, mass_);
+  printf("%s: rx = %e\n", __FUNCTION__, rx);
+  printf("%s: calculated mass (assuming uniform density) = %e\n",
+	 __FUNCTION__, (density*(4.0/3.0*(cello::pi)*rx*ry*rz))/cello::mass_solar);
+  //exit(-99);
   // bounds of possible explosions intersecting this Block
 
   int kxm = MAX((int)floor((bxm-dxm-rx)/(dxp-dxm)*array_[0])-1,0);
@@ -138,12 +144,12 @@ void EnzoInitialCollapse::enforce_block
   // Initialize background 
 
   // ratio of density inside and outside the cloud 
-  const double density_ratio = 100.0;
+  const double density_ratio = 228.33;
   
   std::fill_n(d,m,density / density_ratio);
   std::fill_n(te,m,energy);
   std::fill_n(ie,m,energy);
-  std::fill_n(t,m,temperature_*density_ratio);
+  std::fill_n(t,m,5000.0);
   std::fill_n(dt,m,0.0);
   std::fill_n(p,m,0.0);
   std::fill_n(po,m,0.0);
@@ -174,12 +180,14 @@ void EnzoInitialCollapse::enforce_block
 	    for (int ix=0; ix<mx; ix++) {
 	      double x = bxm + (ix - gx + 0.5)*hx - xc;
 	      int i = INDEX(ix,iy,iz,mx,my);
-
+	      double R2 = x*x + y*y + z*z;
               double r2 = x*x*rx2i + y*y*ry2i + z*z*rz2i;
 	      bool in_sphere = (r2 < 1.0);
 	      if (in_sphere) {
-		d[i]  = density;
+		d[i]  = density*rx*rx/(R2);
+		//printf("density[%d] = %e\n", i, d[i]);
                 t[i]  = temperature_;
+		//exit(-99);
 	      }
 	    }
 	  }
@@ -188,6 +196,8 @@ void EnzoInitialCollapse::enforce_block
     }
   }
 
+  static int counter = 0;
+  printf("Grand. Block done %d\n", counter++); 
 #ifdef DEBUG_PERFORMANCE  
   if (CkMyPe()==0) {
     CkPrintf ("%s:%d %s DEBUG_PERFORMANCE %f\n",

@@ -151,7 +151,10 @@ Initial * EnzoProblem::create_initial_
        enzo_config->initial_turbulence_temperature,
        enzo_config->field_gamma);
   } else if (type == "pm") {
+    printf("%s: config->initial_list[index] = %s\n", __FUNCTION__, config->initial_list[index]);
+    printf("%s: enzo_config->initial_pm_mpp = %f\n", __FUNCTION__, enzo_config->initial_pm_mpp);
     std::string param_str = "Initial:" + config->initial_list[index] + ":mask";
+    printf("%s: param_str = %s\n", __FUNCTION__, param_str);
     initial = new EnzoInitialPm
       (parameters, param_str,
        cycle,time,
@@ -179,11 +182,21 @@ Initial * EnzoProblem::create_initial_
        enzo_config->initial_soup_density,
        enzo_config->initial_soup_pressure_in,
        enzo_config->initial_soup_pressure_out);
+  }
+  else if (type == "burkertbodenheimer") {
+    initial = new EnzoInitialBurkertBodenheimer
+      (cycle,time,
+       enzo_config->initial_burkertbodenheimer_rank,
+       enzo_config->initial_burkertbodenheimer_array,
+       enzo_config->initial_burkertbodenheimer_radius_relative,
+       enzo_config->initial_burkertbodenheimer_particle_ratio,
+       enzo_config->initial_burkertbodenheimer_mass,
+       enzo_config->initial_burkertbodenheimer_temperature);
   } else {
     initial = Problem::create_initial_
       (type,index,config,parameters);
   }
-
+  
   return initial;
 
 }
