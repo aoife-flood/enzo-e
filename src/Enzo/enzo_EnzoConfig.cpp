@@ -51,6 +51,7 @@ EnzoConfig::EnzoConfig() throw ()
   initial_collapse_particle_ratio(0.0),
   initial_collapse_mass(0.0),
   initial_collapse_temperature(0.0),
+  initial_collapse_densityprofile(1),
   // EnzoInitialGrackleTest
 #ifdef CONFIG_USE_GRACKLE
   initial_grackle_test_maximum_H_number_density(1000.0),
@@ -88,6 +89,7 @@ EnzoConfig::EnzoConfig() throw ()
   initial_burkertbodenheimer_particle_ratio(0.0),
   initial_burkertbodenheimer_mass(0.0),
   initial_burkertbodenheimer_temperature(0.0),
+  
   // EnzoInitialSedov[23]
   initial_sedov_rank(0),
   initial_sedov_radius_relative(0.0),
@@ -235,7 +237,7 @@ void EnzoConfig::pup (PUP::er &p)
   p | initial_collapse_particle_ratio;
   p | initial_collapse_mass;
   p | initial_collapse_temperature;
-
+  p | initial_collapse_densityprofile;
 #ifdef CONFIG_USE_GRACKLE
   p | initial_grackle_test_minimum_H_number_density;
   p | initial_grackle_test_maximum_H_number_density;
@@ -619,7 +621,8 @@ void EnzoConfig::read(Parameters * p) throw()
     p->value_float("Initial:collapse:mass",cello::mass_solar);
   initial_collapse_temperature =
     p->value_float("Initial:collapse:temperature",10.0);
-
+  initial_collapse_densityprofile =
+    p->value_integer ("Initial:collapse:densityprofile",1);
   // Grackle test initialization
 #ifdef CONFIG_USE_GRACKLE
   initial_grackle_test_minimum_H_number_density =

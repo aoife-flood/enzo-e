@@ -136,7 +136,8 @@ Initial * EnzoProblem::create_initial_
        enzo_config->initial_collapse_radius_relative,
        enzo_config->initial_collapse_particle_ratio,
        enzo_config->initial_collapse_mass,
-       enzo_config->initial_collapse_temperature);
+       enzo_config->initial_collapse_temperature,
+       enzo_config->initial_collapse_densityprofile);
   } else if (type == "cosmology") {
     initial = new EnzoInitialCosmology
       (cycle,time,

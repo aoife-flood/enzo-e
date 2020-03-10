@@ -14,7 +14,8 @@
 //----------------------------------------------------------------------
 
 // #define DEBUG_PERFORMANCE
-
+#define UNIFORM_DENSITY_PROFILE 1
+#define R2_PROFILE              2
 //----------------------------------------------------------------------
 
 void EnzoInitialCollapse::pup (PUP::er &p)
@@ -117,8 +118,9 @@ void EnzoInitialCollapse::enforce_block
   const double rx2i = 1.0/(rx*rx);
   const double ry2i = 1.0/(ry*ry);
   const double rz2i = 1.0/(rz*rz);
-  
-  const double density = 3.82e-18; 3.82e-12; //mass_ / (4.0/3.0*(cello::pi)*rx*ry*rz);
+
+  // This is the density at the trucation radius
+  const double density = mass_ / (4.0/3.0*(cello::pi)*rx*ry*rz);
 
   printf("%s: Density = %e\n", __FUNCTION__, density);
   printf("%s: mass = %e\n", __FUNCTION__, mass_);
@@ -184,10 +186,16 @@ void EnzoInitialCollapse::enforce_block
               double r2 = x*x*rx2i + y*y*ry2i + z*z*rz2i;
 	      bool in_sphere = (r2 < 1.0);
 	      if (in_sphere) {
-		d[i]  = density*rx*rx/(R2);
-		//printf("density[%d] = %e\n", i, d[i]);
+		if(R2_PROFILE == densityprofile_) //1/r^2 density profile
+		  d[i]  = density*rx*rx/(R2);
+		else if(UNIFORM_DENSITY_PROFILE == densityprofile_)
+		  d[i] = density;
+		else {
+		  CkPrintf ("%s:%d %s Unknown densityprofile selected\n",
+			    __FILE__,__LINE__,block->name().c_str());
+		  exit(-99);
+		}
                 t[i]  = temperature_;
-		//exit(-99);
 	      }
 	    }
 	  }

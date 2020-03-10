@@ -137,6 +137,7 @@ public: // interface
       initial_collapse_particle_ratio(0.0),
       initial_collapse_mass(0.0),
       initial_collapse_temperature(0.0),
+      initial_collapse_densityprofile(1),
       // EnzoGrackleTest
 #ifdef CONFIG_USE_GRACKLE
       initial_grackle_test_maximum_H_number_density(1000.0),
@@ -318,6 +319,7 @@ public: // attributes
   double                     initial_collapse_particle_ratio;
   double                     initial_collapse_mass;
   double                     initial_collapse_temperature;
+  int                        initial_collapse_densityprofile;
 
   /// EnzoGrackleTest
 #ifdef CONFIG_USE_GRACKLE

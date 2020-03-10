@@ -17,7 +17,8 @@
      list = [ "collapse" ];
      # Defaults:
      collapse { radius_relative = 0.15;
-     	      	mass = 3.02*1.998e33; }
+     	      	mass = 100.02*1.998e33;
+		densityprofile = 2; }
      # Initial:collapse:particle_ratio = 0.0
      # Initial:collapse:mass = cello::mass_solar
      # Initial:collapse:temperature = 10.0
@@ -26,11 +27,11 @@
  Mesh {
      root_blocks = [ 4, 4, 4 ];
      root_rank = 3;
-     root_size = [ 64, 64, 64 ];
+     root_size = [ 32, 32, 32 ];
  }
 Method {
      pm_update {
-         max_dt = 1e9;
+         max_dt = 1e8;
      }
 }
 
