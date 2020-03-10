@@ -85,7 +85,7 @@ void EnzoInitialCollapse::enforce_block
   const int m = mx*my*mz;
 
   // Get Fields
-
+  bool RotatingSphere = true; 
   enzo_float *  d = (enzo_float *) field.values ("density");
   enzo_float * dt = (enzo_float *) field.values ("density_total");
   enzo_float *  p = (enzo_float *) field.values ("pressure");
@@ -186,6 +186,7 @@ void EnzoInitialCollapse::enforce_block
               double r2 = x*x*rx2i + y*y*ry2i + z*z*rz2i;
 	      bool in_sphere = (r2 < 1.0);
 	      if (in_sphere) {
+		double radius = sqrt(R2);
 		if(R2_PROFILE == densityprofile_) //1/r^2 density profile
 		  d[i]  = density*rx*rx/(R2);
 		else if(UNIFORM_DENSITY_PROFILE == densityprofile_)
@@ -195,7 +196,36 @@ void EnzoInitialCollapse::enforce_block
 			    __FILE__,__LINE__,block->name().c_str());
 		  exit(-99);
 		}
+		if(RotatingSphere == true) {
+		  /* Start with solid body rotation */
+		  // Find out which shell the cell is in
+		  double AngularVelocity = 7.2e-13; // [rad/s]
+		  //float SphereRotationPeriod = 8.72734;
+		  //a = Ang(SphereAng1,SphereAng2,rx,sqrt(R2));
+		  //double RotVelocityx = -2*(cello::pi)*y / SphereRotationalPeriod;
+		  //double RotVelocityy = 2*(cello::pi)*x / SphereRotationalPeriod;
+		  //double RotVelocityz = 0.0;
+		  vx[i] = -AngularVelocity*y;
+		  vy[i] = AngularVelocity*x;
+		  vz[i] = 0.0;
+
+		  /* Density perturbation */
+		  float cosphi = x/sqrt(x*x+y*y);
+		  float sinphi = y/sqrt(x*x+y*y);
+		  float phi    = acos(x/sqrt(x*x+y*y));
+		  float cos2phi = cosphi*cosphi -sinphi*sinphi;
+		  // Burkert & Bodenheimer (1993) m=2 perturbation: 	      
+		  float m2mode = 1.0 + 0.1*cos(2.*phi);
+		  d[i] += density * m2mode;
+		}
                 t[i]  = temperature_;
+
+
+		if(i == 20) {
+		  printf("Density = %e\n", d[i]);
+		  printf("Angular Velocity = %e rad/s", sqrt(vx[i]*vx[i] + vy[i]*vy[i] + vz[i]*vz[i])/radius);
+		  exit(-99);
+		}
 	      }
 	    }
 	  }
@@ -219,3 +249,9 @@ void EnzoInitialCollapse::enforce_block
   
 }
 
+/************************************************************************/
+
+double Ang(double a1, double a2, double R, double r)
+{
+  return ((a2-a1)/R)*r + a1;
+}
