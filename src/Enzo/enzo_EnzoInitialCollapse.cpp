@@ -122,10 +122,10 @@ void EnzoInitialCollapse::enforce_block
   // This is the density at the trucation radius
   const double density = mass_ / (4.0/3.0*(cello::pi)*rx*ry*rz);
 
-  printf("%s: Density = %e\n", __FUNCTION__, density);
-  printf("%s: mass = %e\n", __FUNCTION__, mass_);
-  printf("%s: rx = %e\n", __FUNCTION__, rx);
-  printf("%s: calculated mass (assuming uniform density) = %e\n",
+  CkPrintf("%s: Density = %e\n", __FUNCTION__, density);
+  CkPrintf("%s: mass = %e\n", __FUNCTION__, mass_);
+  CkPrintf("%s: rx = %e\n", __FUNCTION__, rx);
+  CkPrintf("%s: calculated mass (assuming uniform density) = %e\n",
 	 __FUNCTION__, (density*(4.0/3.0*(cello::pi)*rx*ry*rz))/cello::mass_solar);
   //exit(-99);
   // bounds of possible explosions intersecting this Block
@@ -194,38 +194,9 @@ void EnzoInitialCollapse::enforce_block
 		else {
 		  CkPrintf ("%s:%d %s Unknown densityprofile selected\n",
 			    __FILE__,__LINE__,block->name().c_str());
-		  exit(-99);
-		}
-		if(RotatingSphere == true) {
-		  /* Start with solid body rotation */
-		  // Find out which shell the cell is in
-		  double AngularVelocity = 7.2e-13; // [rad/s]
-		  //float SphereRotationPeriod = 8.72734;
-		  //a = Ang(SphereAng1,SphereAng2,rx,sqrt(R2));
-		  //double RotVelocityx = -2*(cello::pi)*y / SphereRotationalPeriod;
-		  //double RotVelocityy = 2*(cello::pi)*x / SphereRotationalPeriod;
-		  //double RotVelocityz = 0.0;
-		  vx[i] = -AngularVelocity*y;
-		  vy[i] = AngularVelocity*x;
-		  vz[i] = 0.0;
-
-		  /* Density perturbation */
-		  float cosphi = x/sqrt(x*x+y*y);
-		  float sinphi = y/sqrt(x*x+y*y);
-		  float phi    = acos(x/sqrt(x*x+y*y));
-		  float cos2phi = cosphi*cosphi -sinphi*sinphi;
-		  // Burkert & Bodenheimer (1993) m=2 perturbation: 	      
-		  float m2mode = 1.0 + 0.1*cos(2.*phi);
-		  d[i] += density * m2mode;
+		  CkExit(-99);
 		}
                 t[i]  = temperature_;
-
-
-		if(i == 20) {
-		  printf("Density = %e\n", d[i]);
-		  printf("Angular Velocity = %e rad/s", sqrt(vx[i]*vx[i] + vy[i]*vy[i] + vz[i]*vz[i])/radius);
-		  exit(-99);
-		}
 	      }
 	    }
 	  }
@@ -235,7 +206,7 @@ void EnzoInitialCollapse::enforce_block
   }
 
   static int counter = 0;
-  printf("Grand. Block done %d\n", counter++); 
+  CkPrintf("Grand. Block done %d\n", counter++); 
 #ifdef DEBUG_PERFORMANCE  
   if (CkMyPe()==0) {
     CkPrintf ("%s:%d %s DEBUG_PERFORMANCE %f\n",
@@ -249,9 +220,3 @@ void EnzoInitialCollapse::enforce_block
   
 }
 
-/************************************************************************/
-
-double Ang(double a1, double a2, double R, double r)
-{
-  return ((a2-a1)/R)*r + a1;
-}

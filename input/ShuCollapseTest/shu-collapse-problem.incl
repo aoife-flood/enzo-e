@@ -27,7 +27,7 @@
  Mesh {
      root_blocks = [ 4, 4, 4 ];
      root_rank = 3;
-     root_size = [ 32, 32, 32 ];
+     root_size = [ 64, 64, 64 ];
  }
 Method {
      pm_update {

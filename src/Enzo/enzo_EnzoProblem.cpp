@@ -192,7 +192,8 @@ Initial * EnzoProblem::create_initial_
        enzo_config->initial_burkertbodenheimer_radius_relative,
        enzo_config->initial_burkertbodenheimer_particle_ratio,
        enzo_config->initial_burkertbodenheimer_mass,
-       enzo_config->initial_burkertbodenheimer_temperature);
+       enzo_config->initial_burkertbodenheimer_temperature,
+       enzo_config->initial_burkertbodenheimer_densityprofile);
   } else {
     initial = Problem::create_initial_
       (type,index,config,parameters);

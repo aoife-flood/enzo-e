@@ -1,31 +1,12 @@
-#======================================================================
-#
-#  File        : 
-#  Author      : John Regan
-#  Date        : 2020-03-17
-#  Brief       : File for initializing a Burkert-Bodenheimer test
-#
-#    Test for initializing and running the set-up of accreting particles
-#    according the Burkert-Bodenheimer setup. 
-#
-#
-#  Description : 
-#
-#  REQUIRES root_blocks
-#
-#======================================================================
-
-
-
-Adapt {
+ Adapt {
      list = [ "slope" ];
      max_level = 2;
-     min_level = -1;
+     min_level = -2;
      slope {
-         max_coarsen = 1e-12;
-         min_refine = 1e-10;
+         field_list = [ "density" ];
+         min_refine = 1.000000000000000e-10;
+	 
          type = "slope";
-	 field_list = ["density"];
      };
  }
 
@@ -34,32 +15,33 @@ Adapt {
  }
 
  Domain {
-     rank = 3;
      lower = [ -1.600000000000000e+17, -1.600000000000000e+17, -1.600000000000000e+17 ];
+     rank = 3;
      upper = [ 1.600000000000000e+17, 1.600000000000000e+17, 1.600000000000000e+17 ];
  }
 
  Field {
      alignment = 8;
-     gamma = 1.0000000001;
+     gamma = 1.000000001000000;
      ghost_depth = 4;
      history = 1;
-     list = [ "density", "velocity_x", "velocity_y", "velocity_z", "acceleration_x",
-     "acceleration_y", "acceleration_z", "temperature", "total_energy", "internal_energy",
-     "pressure", "density_gas", "density_particle", "density_total", "density_particle_accumulate",
-     "potential", "potential_temp", "potential_copy", "X", "B", "X_copy", "B_copy", "diagonal" ];
+     list = [ "density", "velocity_x", "velocity_y", "velocity_z", "acceleration_x", "acceleration_y", "acceleration_z", "temperature", "total_energy", "internal_energy", "pressure", "density_gas", "density_particle", "density_total", "density_particle_accumulate", "potential", "potential_temp", "potential_copy", "X", "B", "X_copy", "B_copy" ];
      padding = 0;
  }
 
  Initial {
+     collapse {
+         densityprofile = 2;
+         mass = 1.998399600000000e+35;
+         radius_relative = 0.1500000000000000;
+     };
      list = [ "burkertbodenheimer" ];
-     
  }
 
  Mesh {
      root_blocks = [ 4, 4, 4 ];
      root_rank = 3;
-     root_size = [ 32, 32, 32 ];
+     root_size = [ 128, 128, 128 ];
  }
 
  Method {
@@ -69,7 +51,7 @@ Adapt {
      gravity {
          solver = "dd";
      };
-     list = [ "pm_deposit", "gravity", "pm_update" ];
+     list = [ "ppm", "pm_deposit", "gravity", "pm_update" ];
      pm_update {
          max_dt = 1e8;
      };
@@ -78,50 +60,59 @@ Adapt {
  Output {
      ax {
          colormap = [ 0.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 1.000000000000000 ];
-         dir = [ "Dir_Collapse-BCG3D_%04d", "cycle" ];
          field_list = [ "acceleration_x" ];
          image_ghost = false;
          image_size = [ 512, 512 ];
-         name = "ax.png";
+         name = [ "ax-%04d.png", "cycle" ];
          schedule {
-             step = 5;
+             step = 100;
              var = "cycle";
          };
          type = "image";
      };
      dark {
          colormap = [ 0.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 1.000000000000000 ];
-         dir = [ "Dir_Collapse-BCG3D_%04d", "cycle" ];
          image_ghost = false;
          image_size = [ 512, 512 ];
-         name = "dark.png";
+         name = [ "dark-%04d.png", "cycle" ];
          particle_list = [ "dark" ];
          schedule {
-             step = 5;
+             step = 100;
              var = "cycle";
          };
          type = "image";
      };
      data {
-         dir = [ "Dir_Collapse-BCG3D_%04d", "cycle" ];
-         field_list = [ "density", "velocity_x", "velocity_y", "acceleration_x", "acceleration_y", "temperature", "total_energy", "internal_energy", "pressure", "density_total", "potential" ];
+         dir = [ "Dir_Collapse-GAS-DD2_%04d", "cycle" ];
+         field_list = [ "density", "velocity_x", "velocity_y", "velocity_z", "acceleration_x", "acceleration_y", "temperature", "total_energy", "internal_energy", "pressure", "density_total", "potential" ];
          name = [ "data-%04d.h5", "cycle" ];
          schedule {
-             step = 5;
+             step = 100;
              var = "cycle";
          };
          type = "data";
      };
-     list = [ "dark", "po", "ax", "mesh" ];
+     de {
+         colormap = [ 0.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 1.000000000000000 ];
+         field_list = [ "density" ];
+         image_ghost = false;
+         image_size = [ 512, 512 ];
+         name = [ "density-%04d.png", "cycle" ];
+         schedule {
+             step = 100;
+             var = "cycle";
+         };
+         type = "image";
+     };
+     list = [ "ax", "po", "de", "mesh", "data" ];
      mesh {
          colormap = [ 0.000000000000000, 0.000000000000000, 0.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 0.000000000000000, 1.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 0.000000000000000, 1.000000000000000, 0.000000000000000, 0.000000000000000 ];
-         dir = [ "Dir_Collapse-BCG3D_%04d", "cycle" ];
          image_max = 6.000000000000000;
          image_size = [ 512, 512 ];
          image_type = "mesh";
-         name = "mesh.png";
+         name = [ "mesh-%04d.png", "cycle" ];
          schedule {
-             step = 5;
+             step = 100;
              var = "cycle";
          };
          type = "image";
@@ -131,40 +122,28 @@ Adapt {
          field_list = [ "particle_mass" ];
          image_ghost = false;
          image_size = [ 512, 512 ];
-         name = "pmass.png";
+         name = [ "pmass-%04d.png", "cycle" ];
          schedule {
-             step = 5;
+             step = 100;
              var = "cycle";
          };
          type = "image";
      };
      po {
          colormap = [ 0.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 1.000000000000000 ];
-         dir = [ "Dir_Collapse-BCG3D_%04d", "cycle" ];
          field_list = [ "potential_copy" ];
          image_ghost = false;
          image_size = [ 512, 512 ];
-         name = "po.png";
+         name = [ "po-%04d.png", "cycle" ];
          schedule {
-             step = 5;
+             step = 100;
              var = "cycle";
          };
          type = "image";
      };
  }
 
- Particle {
-     dark {
-         attributes = [ "x", "default", "y", "default", "z", "default", "vx", "default", "vy", "default", "vz", "default", "ax", "default", "ay", "default", "az", "default" ];
-         constants = [ "mass", "default", 10.00000000000000 ];
-         groups = [ "has_mass" ];
-         position = [ "x", "y", "z" ];
-         velocity = [ "vx", "vy", "vz" ];
-     };
-     list = [ "dark" ];
- }
-
-Solver {
+ Solver {
      dd {
          coarse_level = 0;
          coarse_solve = "dd_root";
@@ -225,5 +204,5 @@ Solver {
  }
 
  Stopping {
-     cycle = 111;
+     cycle = 9500;
  }

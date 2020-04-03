@@ -175,6 +175,7 @@ public: // interface
       initial_burkertbodenheimer_particle_ratio(0.0),
       initial_burkertbodenheimer_mass(0.0),
       initial_burkertbodenheimer_temperature(0.0),
+      initial_burkertbodenheimer_densityprofile(2.0),
       // EnzoInitialSedovArray[23]
       initial_sedov_rank(0),
       initial_sedov_radius_relative(0.0),
@@ -364,6 +365,7 @@ public: // attributes
   double                     initial_burkertbodenheimer_particle_ratio;
   double                     initial_burkertbodenheimer_mass;
   double                     initial_burkertbodenheimer_temperature;
+  int                        initial_burkertbodenheimer_densityprofile;
   
 
   /// EnzoInitialSedovArray[23]
