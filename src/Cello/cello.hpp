@@ -280,7 +280,7 @@ namespace cello {
   const double clight = 29979245800.0;
 
   // Gravitational constant in CGS
-  const double grav_constant = 6.67384E-8;
+  const double grav_constant = 6.6740831E-8; //6.67384E-8;
 
   // year in seconds
   const double yr_s = 3.1556952E7;

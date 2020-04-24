@@ -1,6 +1,6 @@
  Adapt {
      list = [ "slope" ];
-     max_level = 2;
+     max_level = 0;
      min_level = -2;
      slope {
          field_list = [ "density" ];
@@ -22,18 +22,24 @@
 
  Field {
      alignment = 8;
-     gamma = 1.000000001000000;
+     gamma = 1.0000001;
      ghost_depth = 4;
+     courant = 0.3;
      history = 1;
      list = [ "density", "velocity_x", "velocity_y", "velocity_z", "acceleration_x", "acceleration_y", "acceleration_z", "temperature", "total_energy", "internal_energy", "pressure", "density_gas", "density_particle", "density_total", "density_particle_accumulate", "potential", "potential_temp", "potential_copy", "X", "B", "X_copy", "B_copy" ];
      padding = 0;
+     ##dual_energy = true;
+     ##diffusion = false;
  }
 
  Initial {
-     collapse {
-         densityprofile = 2;
-         mass = 1.998399600000000e+35;
-         radius_relative = 0.1500000000000000;
+     burkertbodenheimer {
+         densityprofile = 1;
+         ##mass = 1.998399600000000e+33;
+	 mass = 2.00014732278550167498e+35;      ##2.00014732278550153663e+33;
+         radius_relative = 0.15625000000000000;
+	 keplerian_fraction = 0.7;
+	 temperature = 10.0;
      };
      list = [ "burkertbodenheimer" ];
  }
@@ -45,9 +51,9 @@
  }
 
  Method {
-     check_gravity {
-         particle_type = "dark";
-     };
+#     check_gravity {
+#         particle_type = "dark";
+#     };
      gravity {
          solver = "dd";
      };
@@ -55,6 +61,15 @@
      pm_update {
          max_dt = 1e8;
      };
+
+     ppm {
+      diffusion   = false;
+      flattening  = 3;
+      steepening  = true;
+      dual_energy = true;
+      mol_weight = 3.0;
+   }
+
  }
 
  Output {
@@ -65,7 +80,7 @@
          image_size = [ 512, 512 ];
          name = [ "ax-%04d.png", "cycle" ];
          schedule {
-             step = 100;
+             step = 50;
              var = "cycle";
          };
          type = "image";
@@ -77,7 +92,7 @@
          name = [ "dark-%04d.png", "cycle" ];
          particle_list = [ "dark" ];
          schedule {
-             step = 100;
+             step = 50;
              var = "cycle";
          };
          type = "image";
@@ -85,9 +100,9 @@
      data {
          dir = [ "Dir_Collapse-GAS-DD2_%04d", "cycle" ];
          field_list = [ "density", "velocity_x", "velocity_y", "velocity_z", "acceleration_x", "acceleration_y", "temperature", "total_energy", "internal_energy", "pressure", "density_total", "potential" ];
-         name = [ "data-%04d.h5", "cycle" ];
+         name = [ "data-%04d-%04d.h5", "cycle", "proc" ];
          schedule {
-             step = 100;
+             step = 50;
              var = "cycle";
          };
          type = "data";
@@ -99,7 +114,7 @@
          image_size = [ 512, 512 ];
          name = [ "density-%04d.png", "cycle" ];
          schedule {
-             step = 100;
+             step = 50;
              var = "cycle";
          };
          type = "image";
@@ -112,7 +127,7 @@
          image_type = "mesh";
          name = [ "mesh-%04d.png", "cycle" ];
          schedule {
-             step = 100;
+             step = 50;
              var = "cycle";
          };
          type = "image";
@@ -124,7 +139,7 @@
          image_size = [ 512, 512 ];
          name = [ "pmass-%04d.png", "cycle" ];
          schedule {
-             step = 100;
+             step = 50;
              var = "cycle";
          };
          type = "image";
@@ -136,7 +151,7 @@
          image_size = [ 512, 512 ];
          name = [ "po-%04d.png", "cycle" ];
          schedule {
-             step = 100;
+             step = 50;
              var = "cycle";
          };
          type = "image";
@@ -204,5 +219,5 @@
  }
 
  Stopping {
-     cycle = 9500;
+     cycle = 10000;
  }

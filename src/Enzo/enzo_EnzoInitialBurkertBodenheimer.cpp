@@ -17,7 +17,7 @@
 #define UNIFORM_DENSITY_PROFILE 1
 #define R2_PROFILE              2
 //----------------------------------------------------------------------
-
+static double Ang(double a1, double a2, double R, double r);
 void EnzoInitialBurkertBodenheimer::pup (PUP::er &p)
 {
   // NOTE: update whenever attributes change
@@ -121,15 +121,27 @@ void EnzoInitialBurkertBodenheimer::enforce_block
 
   // This is the density at the trucation radius
   const double density = mass_ / (4.0/3.0*(cello::pi)*rx*ry*rz);
-
+  double KeplerianVelocity = sqrt(mass_*(cello::grav_constant)/rx);
+  double AngularVelocity = keplerian_fraction_*KeplerianVelocity/rx; // [rad/s]
+  double mu = 3.0;
+  CkPrintf("%s: Sphere Temperature = %f K\n", __FUNCTION__, temperature_);
+  CkPrintf("%s: mu = %f \n", __FUNCTION__, mu);
+  
   CkPrintf("%s: Density = %e\n", __FUNCTION__, density);
   CkPrintf("%s: mass = %e\n", __FUNCTION__, mass_);
   CkPrintf("%s: rx = %e\n", __FUNCTION__, rx);
+  CkPrintf("%s: G = %e\n", __FUNCTION__,cello::grav_constant );
   CkPrintf("%s: calculated mass (assuming uniform density) = %e\n",
 	 __FUNCTION__, (density*(4.0/3.0*(cello::pi)*rx*ry*rz))/cello::mass_solar);
-  //exit(-99);
+  CkPrintf("%s, Angular Velocity = %e rad/s\n", __FUNCTION__, AngularVelocity);
+  CkPrintf("%s: Keplerian Velocity = %e km/s\n", __FUNCTION__, KeplerianVelocity);
+  CkPrintf("%s: Rotation period = %e s\n", __FUNCTION__, __FUNCTION__, 2*(cello::pi)/AngularVelocity);
+  CkPrintf("%s: Sound Speed = %e km/s\n", __FUNCTION__,
+	   sqrt(temperature_*gamma*(cello::kboltz)/((mu)*(cello::mass_hydrogen)))/1e5);
+  CkPrintf("%s: Free fall time = %e s\n", __FUNCTION__,
+	   sqrt(3*(cello::pi)/(32.0*(cello::grav_constant)*density)));
   // bounds of possible explosions intersecting this Block
-
+ 
   int kxm = MAX((int)floor((bxm-dxm-rx)/(dxp-dxm)*array_[0])-1,0);
   int kym = MAX((int)floor((bym-dym-ry)/(dyp-dym)*array_[1])-1,0);
   int kzm = MAX((int)floor((bzm-dzm-rz)/(dzp-dzm)*array_[2])-1,0);
@@ -146,12 +158,12 @@ void EnzoInitialBurkertBodenheimer::enforce_block
   // Initialize background 
 
   // ratio of density inside and outside the cloud 
-  const double density_ratio = 228.33;
+  const double density_ratio = 10000.0;
   
   std::fill_n(d,m,density / density_ratio);
   std::fill_n(te,m,energy);
   std::fill_n(ie,m,energy);
-  std::fill_n(t,m,5000.0);
+  std::fill_n(t,m,1000.0);
   std::fill_n(dt,m,0.0);
   std::fill_n(p,m,0.0);
   std::fill_n(po,m,0.0);
@@ -187,9 +199,9 @@ void EnzoInitialBurkertBodenheimer::enforce_block
 	      bool in_sphere = (r2 < 1.0);
 	      if (in_sphere) {
 		double radius = sqrt(R2);
-		if(R2_PROFILE == densityprofile_) //1/r^2 density profile
+		if(R2_PROFILE == density_profile_) //1/r^2 density profile
 		  d[i]  = density*rx*rx/(R2);
-		else if(UNIFORM_DENSITY_PROFILE == densityprofile_)
+		else if(UNIFORM_DENSITY_PROFILE == density_profile_)
 		  d[i] = density;
 		else {
 		  CkPrintf ("%s:%d %s Unknown densityprofile selected\n",
@@ -197,18 +209,20 @@ void EnzoInitialBurkertBodenheimer::enforce_block
 		  CkExit(-99);
 		}
 		if(RotatingSphere == true) {
-		  /* Start with solid body rotation */
-		  // Find out which shell the cell is in
-		  double AngularVelocity = 7.2e-13; // [rad/s]
-		  //float SphereRotationPeriod = 8.72734;
-		  //a = Ang(SphereAng1,SphereAng2,rx,sqrt(R2));
-		  //double RotVelocityx = -2*(cello::pi)*y / SphereRotationalPeriod;
-		  //double RotVelocityy = 2*(cello::pi)*x / SphereRotationalPeriod;
+		  
+		  
+		  //float SphereRotationPeriod =  8.68568e+11;
+		  //float a = Ang(0.0,0.0,rx,sqrt(R2));
+		  //double RotVelocityx = -2*(cello::pi)*y / SphereRotationPeriod;
+		  //double RotVelocityy = 2*(cello::pi)*x / SphereRotationPeriod;
 		  //double RotVelocityz = 0.0;
 		  vx[i] = -AngularVelocity*y;
 		  vy[i] = AngularVelocity*x;
 		  vz[i] = 0.0;
-
+		  CkPrintf("AV = %e s\n", AngularVelocity);
+		  CkPrintf("x, y, z = %e %e %e\n", x, y, z);
+		  CkPrintf("r = %e cm\n", sqrt(x*x + y*y + z*z));
+		  CkPrintf("Velocity [cm/s] = %e %e %e\n\n", vx[i], vy[i], vz[i]);
 		  /* Density perturbation */
 		  float cosphi = x/sqrt(x*x+y*y);
 		  float sinphi = y/sqrt(x*x+y*y);
@@ -216,16 +230,10 @@ void EnzoInitialBurkertBodenheimer::enforce_block
 		  float cos2phi = cosphi*cosphi -sinphi*sinphi;
 		  // Burkert & Bodenheimer (1993) m=2 perturbation: 	      
 		  float m2mode = 1.0 + 0.1*cos(2.*phi);
-		  d[i] += density * m2mode;
+		  d[i] = density * m2mode;
+		  t[i] = temperature_;
 		}
-                t[i]  = temperature_;
-
-
-		if(i == 20) {
-		  CkPrintf("Density = %e\n", d[i]);
-		  CkPrintf("Angular Velocity = %e rad/s", sqrt(vx[i]*vx[i] + vy[i]*vy[i] + vz[i]*vz[i])/radius);
-		  //CkExit(-99);
-		}
+    
 	      }
 	    }
 	  }
@@ -246,7 +254,7 @@ void EnzoInitialBurkertBodenheimer::enforce_block
   // Initialize particles
 
   Particle particle = block->data()->particle();
-  
+ 
 }
 
 /************************************************************************/

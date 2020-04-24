@@ -89,7 +89,8 @@ EnzoConfig::EnzoConfig() throw ()
   initial_burkertbodenheimer_particle_ratio(0.0),
   initial_burkertbodenheimer_mass(0.0),
   initial_burkertbodenheimer_temperature(0.0),
-  initial_burkertbodenheimer_densityprofile(1),
+  initial_burkertbodenheimer_density_profile(1),
+  initial_burkertbodenheimer_keplerian_fraction(0.7),
   // EnzoInitialSedov[23]
   initial_sedov_rank(0),
   initial_sedov_radius_relative(0.0),
@@ -297,7 +298,9 @@ void EnzoConfig::pup (PUP::er &p)
   p | initial_burkertbodenheimer_particle_ratio;
   p | initial_burkertbodenheimer_mass;
   p | initial_burkertbodenheimer_temperature;
-  p | initial_burkertbodenheimer_densityprofile;
+  p | initial_burkertbodenheimer_density_profile;
+  p | initial_burkertbodenheimer_keplerian_fraction;
+  
 
   p | initial_soup_rank;
   p | initial_soup_file;
@@ -531,9 +534,11 @@ void EnzoConfig::read(Parameters * p) throw()
   initial_burkertbodenheimer_mass =
     p->value_float("Initial:burkertbodenheimer:mass",cello::mass_solar);
   initial_burkertbodenheimer_temperature =
-    p->value_float("Initial:burkertbodenheimer:temperature",10.0);
-  initial_burkertbodenheimer_densityprofile =
-    p->value_integer ("Initial:burkertbodenheimer:densityprofile",2);
+    p->value_float("Initial:burkertbodenheimer:temperature",50.0);
+  initial_burkertbodenheimer_density_profile =
+    p->value_integer ("Initial:burkertbodenheimer:density_profile",1);
+  initial_burkertbodenheimer_keplerian_fraction =
+    p->value_float ("Initial:burkertbodenheimer:keplerian_fraction",0.7);
 
   field_gamma = p->value_float ("Field:gamma",5.0/3.0);
 
