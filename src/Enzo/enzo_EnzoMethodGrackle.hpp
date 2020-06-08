@@ -144,12 +144,6 @@ public: // interface
 protected: // methods
 
 #ifdef CONFIG_USE_GRACKLE
-
-#endif
-
-protected: // methods
-
-#ifdef CONFIG_USE_GRACKLE
   void compute_( EnzoBlock * enzo_block) throw();
 
   void ResetEnergies ( EnzoBlock * enzo_block) throw();

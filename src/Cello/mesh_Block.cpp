@@ -107,9 +107,8 @@ Block::Block ( MsgRefine * msg )
 
   index_.array(array_,array_+1,array_+2);
 
-
   if (! is_first_cycle) {
-    msg->update(data());
+    msg->update(data()); // AJE: my version of this only did this if level > 0... make sure this works with particle ICs
     delete msg;
   } else {
     delete msg;
@@ -1151,6 +1150,42 @@ void Block::check_delete_()
 	     name_.c_str());
     return;
   }
+}
+
+//----------------------------------------------------------------------
+
+bool Block::check_position_in_block(const double &x, const double &y,
+                                    const double &z,
+                                    bool include_ghost // default - false
+                                   )
+{
+
+  double xm,ym,zm;
+  lower(&xm,&ym,&zm);
+  double xp,yp,zp;
+  upper(&xp,&yp,&zp);
+
+  bool result = false;
+
+  if (include_ghost){
+    int gx, gy, gz;
+    double hx,hy,hz;
+    data()->field().ghost_depth(0,&gx,&gy,&gz);
+    cell_width(&hx,&hy,&hz);
+
+    xm -= gx*hx;
+    ym -= gy*hy;
+    zm -= gz*hz;
+    xp += gx*hx;
+    yp += gy*hy;
+    zp += gz*hz;
+  }
+
+  if (  ((x >= xm) && (x < xp)) &&
+        ((y >= ym) && (y < yp)) &&
+        ((z >= zm) && (z < zp))) result = true;
+
+  return result;
 }
 
 //----------------------------------------------------------------------

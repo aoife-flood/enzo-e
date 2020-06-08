@@ -28,18 +28,20 @@
      history = 1;
      list = [ "density", "velocity_x", "velocity_y", "velocity_z", "acceleration_x", "acceleration_y", "acceleration_z", "temperature", "total_energy", "internal_energy", "pressure", "density_gas", "density_particle", "density_total", "density_particle_accumulate", "potential", "potential_temp", "potential_copy", "X", "B", "X_copy", "B_copy" ];
      padding = 0;
-     ##dual_energy = true;
-     ##diffusion = false;
+     dual_energy = true;
+     diffusion = true;
  }
 
  Initial {
      burkertbodenheimer {
-         densityprofile = 1;
-         ##mass = 1.998399600000000e+33;
-	 mass = 2.00014732278550167498e+35;      ##2.00014732278550153663e+33;
-         radius_relative = 0.15625000000000000;
+         density_profile = 2;
+         mass = 6.005015897e+33;   #3.02 Msolar  #Shu Collapse
+	 ##mass = 2.00014732278550167498e+35;      ##2.00014732278550153663e+33;
+         ##radius_relative = 0.15625000000000000;  ##BB test
+	 radius_relative = 1.0;
 	 keplerian_fraction = 0.7;
 	 temperature = 10.0;
+	 rotating = false;
      };
      list = [ "burkertbodenheimer" ];
  }
@@ -50,6 +52,33 @@
      root_size = [ 128, 128, 128 ];
  }
 
+
+Particle {
+    list = ["star"];
+
+    star {
+        attributes = [ "x", "double",
+                       "y", "double",
+                       "z", "double",
+                       "vx", "double",
+                       "vy", "double",
+                       "vz", "double",
+                       "ax", "double",
+                       "ay", "double",
+                       "az", "double",
+                       "mass", "double",
+                       "creation_time", "double",
+                       "lifetime", "double",
+                       "metal_fraction", "double" ];
+        position = [ "x", "y", "z" ];
+        velocity = [ "vx", "vy", "vz" ];
+        groups = ["has_mass"];
+    }
+}
+
+
+
+
  Method {
 #     check_gravity {
 #         particle_type = "dark";
@@ -57,18 +86,49 @@
      gravity {
          solver = "dd";
      };
-     list = [ "ppm", "pm_deposit", "gravity", "pm_update" ];
+     list = [ "ppm", "pm_deposit", "gravity", "pm_update", "star_maker", "feedback" ];
      pm_update {
          max_dt = 1e8;
      };
 
      ppm {
-      diffusion   = false;
+      diffusion   = true;
       flattening  = 3;
       steepening  = true;
       dual_energy = true;
       mol_weight = 3.0;
-   }
+      riemann_solver = "two_shock";
+   };
+
+   star_maker {
+       # run the stochastic star formation algorithm taken from star_maker_ssn in Enzo
+       type = "smartstar";                 # select smartstar
+       
+       number_density_threshold = 1e10;   # in 1/cm^3
+       use_velocity_divergence  = true ;  # converging flow criterion   (def true)	
+       use_jeans_mass           = true ;
+
+
+       minimum_star_mass        = 1000.0;  # for the sake of this algorithm, this IS the
+                                           # mass of the particle formed.
+       use_density_threshold    = true  ;  # check number density for SF (def true)
+       
+       use_dynamical_time       = true  ;  # compute t_ff / t_dyn        (def true)
+       maximum_mass_fraction    = 0.5  ;   # maximum fraction of a cell that can be converted into stars
+                                           # can be redundant with number density threshold depending
+                                           # on rest of SF criteria and refinement criteria
+       efficiency               = 0.02 ;   # efficiency per free fall time
+     };
+
+
+
+     feedback {
+     shift_cell_center       = false;  # kick away from edges if true (not sure if this works yet when false)
+     ke_fraction             = 0.0;    # fraction of kinetic energy (otherwise thermal) - < 0 computes it using Simpson et. al. equations
+     feedback_stencil        = 3;      # deposit feedback in a NxN CIC stencil centered on the particle (needs to be changed to physical radius eventually)
+     use_ionization_feedback = true;   # local (one zone) rad heating (not confirmed to work well yet)
+#    time_first_sn           = 0.05;   # In this FB routine, forces SNe at this age if > 0 (Myr) - debugging purposes only
+  };
 
  }
 

@@ -71,7 +71,9 @@ enum {
 enum enzo_sync_id {
   enzo_sync_id_cg = sync_id_last,
   enzo_sync_id_comoving_expansion,
+  enzo_sync_id_method_background_acceleration,
   enzo_sync_id_method_cosmology,
+  enzo_sync_id_method_feedback,
 #ifdef CONFIG_USE_GRACKLE
   enzo_sync_id_method_grackle,
 #endif
@@ -83,6 +85,7 @@ enum enzo_sync_id {
   enzo_sync_id_method_pm_update,
   enzo_sync_id_method_ppm,
   enzo_sync_id_method_ppml,
+  enzo_sync_id_method_star_maker,
   enzo_sync_id_method_turbulence,
   enzo_sync_id_solver_bicgstab,
   enzo_sync_id_solver_bicgstab_precon_1,
@@ -196,6 +199,8 @@ extern "C" {
 
 #include "enzo_EnzoUnits.hpp"
 
+// #include "enzo_EnzoPhysicalConstants.hpp"
+
 #include "enzo_EnzoFactory.hpp"
 
 #include "enzo_EnzoSimulation.hpp"
@@ -212,6 +217,7 @@ extern "C" {
 
 #include "enzo_EnzoInitialCollapse.hpp"
 #include "enzo_EnzoInitialCosmology.hpp"
+#include "enzo_EnzoInitialFeedbackTest.hpp"
 #include "enzo_EnzoInitialGrackleTest.hpp"
 #include "enzo_EnzoInitialImplosion2.hpp"
 #include "enzo_EnzoInitialMusic.hpp"
@@ -222,15 +228,20 @@ extern "C" {
 #include "enzo_EnzoInitialSedovRandom.hpp"
 #include "enzo_EnzoInitialSoup.hpp"
 #include "enzo_EnzoInitialTurbulence.hpp"
+#include "enzo_EnzoInitialIsolatedGalaxy.hpp"
 #include "enzo_EnzoInitialBurkertBodenheimer.hpp"
 
 #include "enzo_EnzoRefineShock.hpp"
 #include "enzo_EnzoRefineParticleMass.hpp"
 #include "enzo_EnzoRefineMass.hpp"
 
+#include "enzo_EnzoMethodBackgroundAcceleration.hpp"
 #include "enzo_EnzoMethodCheckGravity.hpp"
 #include "enzo_EnzoMethodComovingExpansion.hpp"
 #include "enzo_EnzoMethodCosmology.hpp"
+#include "enzo_EnzoMethodFeedback.hpp"
+#include "enzo_EnzoMethodDistributedFeedback.hpp"
+#include "enzo_EnzoMethodAccretion.hpp"
 #include "enzo_EnzoMethodGrackle.hpp"
 #include "enzo_EnzoMethodGravity.hpp"
 #include "enzo_EnzoMethodHeat.hpp"
@@ -240,6 +251,9 @@ extern "C" {
 #include "enzo_EnzoMethodPpm.hpp"
 #include "enzo_EnzoMethodPpml.hpp"
 #include "enzo_EnzoMethodTurbulence.hpp"
+#include "enzo_EnzoMethodStarMaker.hpp"
+#include "enzo_EnzoMethodStarMakerStochasticSF.hpp"
+#include "enzo_EnzoMethodStarMakerSmartStar.hpp"
 
 #include "enzo_EnzoMatrixDiagonal.hpp"
 #include "enzo_EnzoMatrixIdentity.hpp"

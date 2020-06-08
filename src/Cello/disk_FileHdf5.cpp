@@ -14,6 +14,13 @@
 #define MAX_DATA_RANK 4
 #define MAX_ATTR_RANK 4
 
+//#define DEBUG_OUTPUT
+#ifdef DEBUG_OUTPUT
+#  define TRACE_OUTPUT(M) CkPrintf ("%d TRACE_OUTPUT %s\n", CkMyPe(), M); fflush(stdout);
+#else
+#  define TRACE_OUTPUT(M) /*  */
+#endif
+
 //----------------------------------------------------------------------
 
 std::map<const std::string,FileHdf5 *> FileHdf5::file_list;
@@ -70,8 +77,9 @@ FileHdf5::~FileHdf5() throw()
 void FileHdf5::file_open () throw()
 {
 
-  // check file closed
+  TRACE_OUTPUT("FileHdf5::file_open()");
 
+  // check file closed
   std::string file_name = path_ + "/" + name_;
   
   ASSERT1("FileHdf5::file_open", "Attempting to reopen an opened file %s",
@@ -91,7 +99,6 @@ void FileHdf5::file_open () throw()
 	 file_id_,file_name.c_str(), file_id_ >= 0);
 
   // update file state
-
   is_file_open_ = true;
 
 }
@@ -115,6 +122,7 @@ int FileHdf5::data_size (int * m4_int) throw()
 void FileHdf5::file_create () throw()
 {
 
+  TRACE_OUTPUT("FileHdf5::file_create()");
   // create file
 
   std::string file_name = path_ + "/" + name_;
@@ -135,7 +143,6 @@ void FileHdf5::file_create () throw()
 	  file_id_,file_name.c_str(), file_id_ >= 0);
 
   // update file state
-
   is_file_open_ = true;
 
 }
@@ -144,6 +151,9 @@ void FileHdf5::file_create () throw()
 
 void FileHdf5::file_close () throw()
 {
+
+  TRACE_OUTPUT("FileHdf5::file_close");
+
   // error check file open
 
   std::string file_name = path_ + "/" + name_;
@@ -152,7 +162,6 @@ void FileHdf5::file_close () throw()
 	  file_name.c_str(), (is_file_open_));
 
   // close dataset if opened
-
   data_close();
 
   // Close the file
@@ -181,7 +190,7 @@ void FileHdf5::data_open
 {
 
  // error check file closed
-
+  TRACE_OUTPUT("FileHdf5::data_open()");
   std::string file_name = path_ + "/" + name_;
 
   ASSERT1("FileHdf5::data_open", "Trying to read from unopened file %s",
@@ -254,13 +263,14 @@ void FileHdf5::data_create
   int o1, int o2, int o3, int o4) throw()
 {
 
+  TRACE_OUTPUT("FileHdf5::data_create()");
+
   if (n1==0) n1=m1;
   if (n2==0) n2=m2;
   if (n3==0) n3=m3;
   if (n4==0) n4=m4;
 
   // Initialize data attributes
-
   data_name_ = name;
   data_type_ = type;
 
@@ -343,8 +353,9 @@ void FileHdf5::data_read
 
 void FileHdf5::data_write ( const void * buffer ) throw()
 {
-  // error check file open
+  TRACE_OUTPUT("FileHdf5::data_write()");
 
+  // error check file open
   std::string file_name = path_ + "/" + name_;
 
   ASSERT1("FileHdf5::data_write", "Trying to write to unopened file %s",
@@ -379,12 +390,14 @@ void FileHdf5::data_write ( const void * buffer ) throw()
 
 void FileHdf5::data_close() throw()
 {
-  if (is_data_open_) {
 
+  TRACE_OUTPUT("FileHdf5::data_close() - checking");
+  if (is_data_open_) {
+    TRACE_OUTPUT("FileHdf5::data_close() - closing");
     // close the dataspace
 
     space_close_(data_space_id_);
-    //    space_close_(mem_space_id_);
+    //     space_close_(mem_space_id_);
 
     // close the dataset
 
@@ -402,6 +415,8 @@ void FileHdf5::file_read_meta
   ( void * buffer, std::string name,  int * type,
     int * n1, int * n2, int * n3, int * n4) throw()
 {
+
+  TRACE_OUTPUT("FileHdf5::file_read_meta()");
 
   std::string file_name = path_ + "/" + name_;
 
@@ -421,7 +436,6 @@ void FileHdf5::file_read_meta
 	  (meta_id >= 0));
 
   // get dataspace
-
   hid_t meta_space_id = get_attr_space_(meta_id,name);
 
   // set output extents
@@ -456,8 +470,10 @@ void FileHdf5::data_read_meta
   ( void * buffer, std::string name,  int * type,
     int * n1, int * n2, int * n3, int * n4) throw()
 {
-  // error check file open
 
+  TRACE_OUTPUT("FileHdf5::data_read_meta()");
+
+  // error check file open
   std::string file_name = path_ + "/" + name_;
 
   ASSERT1("FileHdf5::data_read_meta",
@@ -558,10 +574,11 @@ void FileHdf5::group_chdir (std::string group_path) throw()
 
 void FileHdf5::group_open () throw()
 {
-  // close current group if open
 
+  TRACE_OUTPUT("FileHdf5::group_open()");
+  // close current group if open
   group_close();
-  
+
   // open group
 
   group_id_ = H5Gopen(file_id_, group_name_.c_str(),H5P_DEFAULT);
@@ -585,8 +602,9 @@ void FileHdf5::group_open () throw()
 
 void FileHdf5::group_create () throw()
 {
-  // close current group if open
+  TRACE_OUTPUT("FileHdf5::group_create()");
 
+  // close current group if open
   group_close();
 
   // Create ancestor groups beginning at root '/'
@@ -678,12 +696,14 @@ void FileHdf5::group_create () throw()
 
 void FileHdf5::group_close () throw()
 {
+  TRACE_OUTPUT("FileHdf5::group_close() - checking");
   if (is_group_open_) {
-    
+
 #ifdef TRACE_DISK  
     CkPrintf ("%d [%d] TRACE_DISK H5Gclose(%d)\n",CkMyPe(),__LINE__,group_id_);
   fflush(stdout);
 #endif  
+
     herr_t retval = H5Gclose(group_id_);
 
     ASSERT2("FileHdf5::group_close", "Return value %d closing group %s",
@@ -699,8 +719,10 @@ void FileHdf5::group_read_meta
   ( void * buffer, std::string name,  int * type,
     int * n1, int * n2, int * n3, int * n4) throw()
 {
-  // error check file open
 
+  TRACE_OUTPUT("FileHdf5::group_read_meta()");
+
+  // error check file open
   std::string file_name = path_ + "/" + name_;
 
   ASSERT1("FileHdf5::group_read_meta",
@@ -774,8 +796,10 @@ void FileHdf5::write_meta_
   const void * buffer, std::string name, int type,
   int n1, int n2, int n3, int n4) throw()
 {
-  // error check file open
 
+  TRACE_OUTPUT("FileHdf5::write_meta_()");
+
+  // error check file open
   std::string file_name = path_ + "/" + name_;
 
   ASSERT1("FileHdf5::write_meta_",

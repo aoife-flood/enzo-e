@@ -118,18 +118,37 @@ void EnzoInitialCollapse::enforce_block
   const double rx2i = 1.0/(rx*rx); 
   const double ry2i = 1.0/(ry*ry);
   const double rz2i = 1.0/(rz*rz);
-
+  double density = 0.0;
   // This is the density at the trucation radius
-  const double density = mass_ / (4.0/3.0*(cello::pi)*rx*ry*rz);
-
+  if(density_profile_ == R2_PROFILE) {
+    if(truncation_density_ != 0.0){
+      CkPrintf("Truncation Density set. Overriding mass.\n");
+      density = truncation_density_;
+    }
+    else
+      density = mass_/(4.0*(cello::pi)*rx*ry*rz);
+  }
+  else { //This is the mean density
+    density = mass_ / (4.0/3.0*(cello::pi)*rx*ry*rz);
+  }
+  double mu = 3.0;
+  double soundspeed = sqrt(temperature_*gamma*(cello::kboltz)/((mu)*(cello::mass_hydrogen)));
+  CkPrintf("%s: Profile = %d\n", __FUNCTION__, density_profile_);
   CkPrintf("%s: Density = %e\n", __FUNCTION__, density);
   CkPrintf("%s: mass = %e\n", __FUNCTION__, mass_);
   CkPrintf("%s: rx = %e\n", __FUNCTION__, rx);
-  CkPrintf("%s: calculated mass (assuming uniform density) = %e\n",
-	 __FUNCTION__, (density*(4.0/3.0*(cello::pi)*rx*ry*rz))/cello::mass_solar);
-  //exit(-99);
+  CkPrintf("%s: Sound Speed = %e km/s\n", __FUNCTION__, soundspeed/1e5);
+  CkPrintf("%s: CellWidth = %e cm\n", __FUNCTION__, hx);
+  if(density_profile_ == UNIFORM_DENSITY_PROFILE)
+    CkPrintf("%s: calculated mass (assuming uniform density) = %e\n",
+	     __FUNCTION__, (density*(4.0/3.0*(cello::pi)*rx*ry*rz))/cello::mass_solar);
+  if(density_profile_ == R2_PROFILE)
+    CkPrintf("%s: calculated mass (assuming non-uniform density) = %e\n",
+	     __FUNCTION__, (density*(4.0*(cello::pi)*rx*ry*rz))/cello::mass_solar);
+  CkPrintf("%s: Instability Parameter = %f\n", __FUNCTION__,
+	   4*(cello::pi)*(cello::grav_constant)*density*rx*rx/(soundspeed*soundspeed));
   // bounds of possible explosions intersecting this Block
-
+  //CkExit(-99);
   int kxm = MAX((int)floor((bxm-dxm-rx)/(dxp-dxm)*array_[0])-1,0);
   int kym = MAX((int)floor((bym-dym-ry)/(dyp-dym)*array_[1])-1,0);
   int kzm = MAX((int)floor((bzm-dzm-rz)/(dzp-dzm)*array_[2])-1,0);
@@ -184,15 +203,15 @@ void EnzoInitialCollapse::enforce_block
 	      int i = INDEX(ix,iy,iz,mx,my);
 	      double R2 = x*x + y*y + z*z;
               double r2 = x*x*rx2i + y*y*ry2i + z*z*rz2i;
-	      bool in_sphere = (r2 < 1.0);
+	      bool in_sphere = (r2 <= 1.0);
 	      if (in_sphere) {
 		double radius = sqrt(R2);
-		if(R2_PROFILE == densityprofile_) //1/r^2 density profile
+		if(R2_PROFILE == density_profile_) //1/r^2 density profile
 		  d[i]  = density*rx*rx/(R2);
-		else if(UNIFORM_DENSITY_PROFILE == densityprofile_)
+		else if(UNIFORM_DENSITY_PROFILE == density_profile_)
 		  d[i] = density;
 		else {
-		  CkPrintf ("%s:%d %s Unknown densityprofile selected\n",
+		  CkPrintf ("%s:%d %s Unknown density_profile selected\n",
 			    __FILE__,__LINE__,block->name().c_str());
 		  CkExit(-99);
 		}

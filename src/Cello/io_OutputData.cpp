@@ -12,7 +12,7 @@
 
 //----------------------------------------------------------------------
 
-// #define TRACE_OUTPUT
+//#define TRACE_OUTPUT
 
 OutputData::OutputData
 (

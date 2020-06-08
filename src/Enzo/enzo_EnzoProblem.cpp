@@ -128,6 +128,8 @@ Initial * EnzoProblem::create_initial_
   } else if (type == "grackle_test") {
     initial = new EnzoInitialGrackleTest(enzo_config);
 #endif /* CONFIG_USE_GRACKLE */
+  } else if (type == "feedback_test") {
+    initial = new EnzoInitialFeedbackTest(enzo_config);
   } else if (type == "collapse") {
     initial = new EnzoInitialCollapse
       (cycle,time,
@@ -137,7 +139,8 @@ Initial * EnzoProblem::create_initial_
        enzo_config->initial_collapse_particle_ratio,
        enzo_config->initial_collapse_mass,
        enzo_config->initial_collapse_temperature,
-       enzo_config->initial_collapse_densityprofile);
+       enzo_config->initial_collapse_density_profile,
+       enzo_config->initial_collapse_truncation_density);
   } else if (type == "cosmology") {
     initial = new EnzoInitialCosmology
       (cycle,time,
@@ -194,7 +197,10 @@ Initial * EnzoProblem::create_initial_
        enzo_config->initial_burkertbodenheimer_mass,
        enzo_config->initial_burkertbodenheimer_temperature,
        enzo_config->initial_burkertbodenheimer_density_profile,
-       enzo_config->initial_burkertbodenheimer_keplerian_fraction);
+       enzo_config->initial_burkertbodenheimer_keplerian_fraction,
+       enzo_config->initial_burkertbodenheimer_rotating);
+  } else if (type == "isolated_galaxy") {
+    initial = new EnzoInitialIsolatedGalaxy (enzo_config);
   } else {
     initial = Problem::create_initial_
       (type,index,config,parameters);
@@ -233,7 +239,7 @@ Refine * EnzoProblem::create_refine_
 
   if (type == "shock") {
 
-    return new EnzoRefineShock 
+    return new EnzoRefineShock
       (config->adapt_min_refine[index],
        config->adapt_max_coarsen[index],
        config->adapt_min_refine2[index],
@@ -283,7 +289,9 @@ Solver * EnzoProblem::create_solver_
   const EnzoConfig * enzo_config = enzo::config();
 
   Solver * solver = NULL;
-  
+
+  int rank = config->mesh_root_rank;
+
   // Set solve type if not default "on_leaves" (solve_leaf)
 
   std::string solve_type_name=enzo_config->solver_solve_type[index_solver];
@@ -342,7 +350,7 @@ Solver * EnzoProblem::create_solver_
        enzo_config->solver_last_smooth[index_solver],
        restrict,  prolong,
        enzo_config->solver_coarse_level[index_solver]);
-       
+
   } else if (solver_type == "bicgstab") {
 
       solver = new EnzoSolverBiCgStab
@@ -570,7 +578,7 @@ Method * EnzoProblem::create_method_
     std::string solver_name = enzo_config->method_gravity_solver;
 
     int index_solver = enzo_config->solver_index.at(solver_name);
-    
+
     ASSERT1 ("EnzoProblem::create_solver_()",
 	     "Cannot find solver \"%s\"",
 	     solver_name.c_str(),
@@ -583,6 +591,43 @@ Method * EnzoProblem::create_method_
        enzo_config->method_gravity_order,
        enzo_config->method_gravity_accumulate);
 
+  } else if (name == "background_acceleration") {
+
+    // If self-gravity is calculated, we do not need to zero
+    // out the acceleration field from the previous time step
+    // before adding the background accelerations
+    bool zero_acceleration = true;
+    for (int index = 0; index < method_list_.size(); index++){
+      if (method_list_[index]->name() == "gravity"){
+        zero_acceleration = false;
+        break;
+      }
+    }
+
+    method = new EnzoMethodBackgroundAcceleration
+          (zero_acceleration);
+
+  } else if (name == "star_maker") {
+
+    // should generalize this to enable multiple maker types
+    if (enzo_config->method_star_maker_type == "stochastic"){
+      method = new EnzoMethodStarMakerStochasticSF();
+    }
+    if(enzo_config->method_star_maker_type == "smartstar"){
+      method = new EnzoMethodStarMakerSmartStar();
+    } else{ // does not do anything
+      method = new EnzoMethodStarMaker();
+    }
+
+  } else if (name == "feedback") {
+
+    // need a similar type swtich as in star maker
+    method = new EnzoMethodDistributedFeedback();
+
+  } else if (name == "accretion") {
+
+    method = new EnzoMethodAccretion();
+    
   } else {
 
     // Fallback to Cello method's
@@ -651,7 +696,6 @@ Physics * EnzoProblem::create_physics_
 
     physics = Problem::create_physics_
       (type,index,config,parameters);
-
   }
 
   return physics;
@@ -696,6 +740,7 @@ Restrict * EnzoProblem::create_restrict_
   Restrict * restrict = 0;
 
   if (type == "enzo") {
+
     restrict = new EnzoRestrict (enzo::config()->interpolation_method);
 
   } else {

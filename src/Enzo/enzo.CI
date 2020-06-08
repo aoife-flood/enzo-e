@@ -49,6 +49,7 @@ module enzo {
 
   PUPable EnzoInitialCollapse;
   PUPable EnzoInitialCosmology;
+  PUPable EnzoInitialFeedbackTest;
   PUPable EnzoInitialImplosion2;
   PUPable EnzoInitialMusic;
   PUPable EnzoInitialPm;
@@ -57,8 +58,9 @@ module enzo {
   PUPable EnzoInitialSedovArray2;
   PUPable EnzoInitialSedovArray3;
   PUPable EnzoInitialSedovRandom;
-  PUPable EnzoInitialSoup;  	  
+  PUPable EnzoInitialSoup;
   PUPable EnzoInitialTurbulence;
+  PUPable EnzoInitialIsolatedGalaxy;
 
   PUPable EnzoRefineShock;
   PUPable EnzoRefineParticleMass;
@@ -73,10 +75,15 @@ module enzo {
   PUPable EnzoMatrixDiagonal;
   PUPable EnzoMatrixIdentity;
 
+  PUPable EnzoMethodBackgroundAcceleration;
+  PUPable EnzoMethodFeedback;
+  PUPable EnzoMethodDistributedFeedback;
+  PUPable EnzoMethodAccretion;
   PUPable EnzoMethodCheckGravity;
   PUPable EnzoMethodComovingExpansion;
   PUPable EnzoMethodCosmology;
   PUPable EnzoMethodGravity;
+
   PUPable EnzoMethodHeat;
   PUPable EnzoMethodHydro;
   PUPable EnzoMethodPmDeposit;
@@ -84,6 +91,10 @@ module enzo {
   PUPable EnzoMethodPpm;
   PUPable EnzoMethodPpml;
   PUPable EnzoMethodTurbulence;
+
+  PUPable EnzoMethodStarMaker;
+  PUPable EnzoMethodStarMakerStochasticSF;
+  PUPable EnzoMethodStarMakerSmartStar;
 
   PUPable EnzoPhysicsCosmology;
 

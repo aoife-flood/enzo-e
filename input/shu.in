@@ -1,0 +1,276 @@
+ Adapt {
+     list = [ "slope" ];
+     max_level = 0;
+     min_level = -2;
+     slope {
+         field_list = [ "density" ];
+         min_refine = 1.000000000000000e-10;
+	 
+         type = "slope";
+     };
+ }
+
+ Boundary {
+     type = "periodic";
+ }
+
+ Domain {
+     lower = [ -1.54285000000000000e+18, -1.54285000000000000e+18, -1.54285000000000000e+18 ];
+     rank = 3;
+     upper = [ 1.54285000000000000e+18, 1.54285000000000000e+18, 1.54285000000000000e+18 ];
+ }
+
+ Field {
+     alignment = 8;
+     gamma = 1.0000001;
+     ghost_depth = 4;
+     courant = 0.3;
+     history = 1;
+     list = [ "density", "velocity_x", "velocity_y", "velocity_z", "acceleration_x", "acceleration_y", "acceleration_z", "temperature", "total_energy", "internal_energy", "pressure", "density_gas", "density_particle", "density_total", "density_particle_accumulate", "potential", "potential_temp", "potential_copy", "X", "B", "X_copy", "B_copy" ];
+     padding = 0;
+     dual_energy = true;
+     diffusion = true;
+ }
+
+ Initial {
+     collapse {
+         mass = 6.005015897e33;  #3.02 Msolar
+	 radius_relative = 0.016203778;
+	 temperature = 10.0;
+	 density_profile = 2;
+	 truncation_density = 0.0;
+     };
+     list = [ "collapse" ];
+ }
+
+ Mesh {
+     root_blocks = [ 4, 4, 4 ];
+     root_rank = 3;
+     root_size = [ 128, 128, 128 ];
+ }
+
+
+Particle {
+    list = ["star"];
+
+    star {
+        attributes = [ "x", "double",
+                       "y", "double",
+                       "z", "double",
+                       "vx", "double",
+                       "vy", "double",
+                       "vz", "double",
+                       "ax", "double",
+                       "ay", "double",
+                       "az", "double",
+                       "mass", "double",
+                       "creation_time", "double",
+                       "lifetime", "double",
+                       "metal_fraction", "double",
+		       "accretion_rate", "double",
+		       "accretion_rate_time", "double" ];
+        position = [ "x", "y", "z" ];
+        velocity = [ "vx", "vy", "vz" ];
+        groups = ["has_mass"];
+    }
+}
+
+
+
+
+ Method {
+#     check_gravity {
+#         particle_type = "dark";
+#     };
+     gravity {
+         solver = "dd";
+     };
+     list = [ "ppm", "pm_deposit", "gravity", "pm_update", "star_maker", "accretion"];
+     pm_update {
+         max_dt = 1e99;
+     };
+
+     ppm {
+      diffusion   = true;
+      flattening  = 3;
+      steepening  = true;
+      dual_energy = true;
+      mol_weight = 3.0;
+      riemann_solver = "two_shock";
+   };
+
+   star_maker {
+       # run the stochastic star formation algorithm taken from star_maker_ssn in Enzo
+       type = "smartstar";                 # select smartstar
+       
+       number_density_threshold = 1.2e7;   # in 1/cm^3
+       use_velocity_divergence  = true ;  # converging flow criterion   (def true)	
+       use_jeans_mass           = true ;
+
+
+       minimum_star_mass        = 1000.0;  # for the sake of this algorithm, this IS the
+                                           # mass of the particle formed.
+       use_density_threshold    = true  ;  # check number density for SF (def true)
+       
+       use_dynamical_time       = true  ;  # compute t_ff / t_dyn        (def true)
+       maximum_mass_fraction    = 0.5  ;   # maximum fraction of a cell that can be converted into stars
+                                           # can be redundant with number density threshold depending
+                                           # on rest of SF criteria and refinement criteria
+       efficiency               = 0.02 ;   # efficiency per free fall time
+     };
+
+     accretion {
+     prescription = 1;     #Bondi Hoyle
+     }
+
+ }
+
+ Output {
+     ax {
+         colormap = [ 0.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 1.000000000000000 ];
+         field_list = [ "acceleration_x" ];
+         image_ghost = false;
+         image_size = [ 512, 512 ];
+         name = [ "ax-%04d.png", "cycle" ];
+         schedule {
+             step = 50;
+             var = "cycle";
+         };
+         type = "image";
+     };
+     dark {
+         colormap = [ 0.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 1.000000000000000 ];
+         image_ghost = false;
+         image_size = [ 512, 512 ];
+         name = [ "dark-%04d.png", "cycle" ];
+         particle_list = [ "dark" ];
+         schedule {
+             step = 50;
+             var = "cycle";
+         };
+         type = "image";
+     };
+     data {
+         dir = [ "Dir_Collapse-GAS-DD2_%04d", "cycle" ];
+         field_list = [ "density", "velocity_x", "velocity_y", "velocity_z", "acceleration_x", "acceleration_y", "temperature", "total_energy", "internal_energy", "pressure", "density_total", "potential" ];
+         name = [ "data-%04d-%04d.h5", "cycle", "proc" ];
+         schedule {
+             step = 10;
+             var = "cycle";
+         };
+         type = "data";
+     };
+     de {
+         colormap = [ 0.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 1.000000000000000 ];
+         field_list = [ "density" ];
+         image_ghost = false;
+         image_size = [ 512, 512 ];
+         name = [ "density-%04d.png", "cycle" ];
+         schedule {
+             step = 50;
+             var = "cycle";
+         };
+         type = "image";
+     };
+     list = [ "ax", "po", "de", "mesh", "data" ];
+     mesh {
+         colormap = [ 0.000000000000000, 0.000000000000000, 0.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 0.000000000000000, 1.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 0.000000000000000, 1.000000000000000, 0.000000000000000, 0.000000000000000 ];
+         image_max = 6.000000000000000;
+         image_size = [ 512, 512 ];
+         image_type = "mesh";
+         name = [ "mesh-%04d.png", "cycle" ];
+         schedule {
+             step = 50;
+             var = "cycle";
+         };
+         type = "image";
+     };
+     pmass {
+         colormap = [ 0.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 1.000000000000000 ];
+         field_list = [ "particle_mass" ];
+         image_ghost = false;
+         image_size = [ 512, 512 ];
+         name = [ "pmass-%04d.png", "cycle" ];
+         schedule {
+             step = 50;
+             var = "cycle";
+         };
+         type = "image";
+     };
+     po {
+         colormap = [ 0.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 1.000000000000000 ];
+         field_list = [ "potential_copy" ];
+         image_ghost = false;
+         image_size = [ 512, 512 ];
+         name = [ "po-%04d.png", "cycle" ];
+         schedule {
+             step = 50;
+             var = "cycle";
+         };
+         type = "image";
+     };
+ }
+
+ Solver {
+     dd {
+         coarse_level = 0;
+         coarse_solve = "dd_root";
+         domain_solve = "dd_domain";
+         last_smooth = "dd_smooth";
+         max_level = 4;
+         min_level = -2;
+         monitor_iter = 1;
+         type = "dd";
+     };
+     dd_domain {
+         coarse_level = 0;
+         iter_max = 100;
+         max_level = 4;
+         min_level = -2;
+         monitor_iter = 0;
+         res_tol = 0.01000000000000000;
+         solve_type = "tree";
+         type = "bicgstab";
+     };
+     dd_root {
+         coarse_level = -2;
+         coarse_solve = "root_coarse";
+         iter_max = 10;
+         max_level = 0;
+         min_level = -2;
+         monitor_iter = 1;
+         post_smooth = "root_post";
+         pre_smooth = "root_pre";
+         res_tol = 0.01000000000000000;
+         solve_type = "level";
+         type = "mg0";
+     };
+     dd_smooth {
+         iter_max = 3;
+         monitor_iter = 1;
+         solve_type = "leaf";
+         type = "jacobi";
+     };
+     list = [ "dd", "dd_root", "dd_domain", "dd_smooth", "root_coarse", "root_pre", "root_post" ];
+     root_coarse {
+         iter_max = 100;
+         monitor_iter = 1;
+         res_tol = 0.01000000000000000;
+         solve_type = "block";
+         type = "cg";
+     };
+     root_post {
+         iter_max = 2;
+         solve_type = "level";
+         type = "jacobi";
+     };
+     root_pre {
+         iter_max = 2;
+         solve_type = "level";
+         type = "jacobi";
+     };
+ }
+
+ Stopping {
+     cycle = 10000;
+ }

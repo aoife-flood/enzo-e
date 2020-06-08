@@ -8,8 +8,6 @@ import socket
 # USER CONFIGURATION
 #======================================================================
 
-new_ppm = 1
-
 #----------------------------------------------------------------------
 # Temporary setting for using new Output implementation
 #----------------------------------------------------------------------
@@ -187,6 +185,8 @@ print
 define = {}
 
 # Temporary defines
+
+define_new_ppm = 'NEW_PPM'
 
 # Precision defines
 

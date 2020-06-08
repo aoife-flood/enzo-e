@@ -26,7 +26,8 @@ public: // interface
    double mass,
    double temperature,
    int density_profile,
-   double keplerian_fraction
+   double keplerian_fraction,
+   bool rotating
    ) throw()
     : Initial (cycle,time),
       rank_(rank),
@@ -35,7 +36,8 @@ public: // interface
       mass_(mass),
       temperature_(temperature),
       density_profile_(density_profile),
-      keplerian_fraction_(keplerian_fraction)
+      keplerian_fraction_(keplerian_fraction),
+      rotating_(rotating)
   {
     array_[0] = array[0];
     array_[1] = array[1];
@@ -57,7 +59,8 @@ public: // interface
       mass_(0.0),
       temperature_(0.0),
       density_profile_(1),
-      keplerian_fraction_(1.0)
+      keplerian_fraction_(1.0),
+      rotating_(true)
   {
     array_[0] = 0;
     array_[1] = 0; 
@@ -96,10 +99,14 @@ private: // attributes
   /// Density Profile
   /// 1 = Uniform Density
   /// 2 = 1/r^2 power law profile 
+
   int density_profile_;
 
   // Rate of rotation as fraction of Keplerian
   double keplerian_fraction_;
+
+  // Is the sphere rotating?
+  bool rotating_;
 };
 
 #endif /* ENZO_ENZO_INITIAL_BURKERTBODENHEIMER_HPP */

@@ -25,7 +25,8 @@ public: // interface
    double particle_ratio,
    double mass,
    double temperature,
-   int densityprofile
+   int density_profile,
+   double truncation_density
    ) throw()
     : Initial (cycle,time),
       rank_(rank),
@@ -33,7 +34,8 @@ public: // interface
       particle_ratio_(particle_ratio),
       mass_(mass),
       temperature_(temperature),
-      densityprofile_(densityprofile)
+      density_profile_(density_profile),
+      truncation_density_(truncation_density)
   {
     array_[0] = array[0];
     array_[1] = array[1];
@@ -54,7 +56,8 @@ public: // interface
       particle_ratio_(0.0),
       mass_(0.0),
       temperature_(0.0),
-      densityprofile_(1)
+      density_profile_(2),
+      truncation_density_(0.0)
   {
     array_[0] = 0;
     array_[1] = 0; 
@@ -93,7 +96,11 @@ private: // attributes
   /// Density Profile
   /// 1 = Uniform Density
   /// 2 = 1/r^2 power law profile 
-  int densityprofile_;
+  int density_profile_;
+
+  //density at the truncation radius
+  //can be used as an alternative to mass
+  double truncation_density_;
 };
 
 #endif /* ENZO_ENZO_INITIAL_SEDOV_COLLAPSE_HPP */

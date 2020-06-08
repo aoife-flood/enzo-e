@@ -17,7 +17,8 @@ EnzoMethodGrackle::EnzoMethodGrackle
   const double physics_cosmology_initial_redshift,
   const double time
 )
-  : Method()
+  : Method(),
+    grackle_units_(), grackle_chemistry_data_defined_(false)
 {
 #ifdef CONFIG_USE_GRACKLE
 
@@ -156,12 +157,12 @@ void EnzoMethodGrackle::compute ( Block * block) throw()
 
     this->compute_(enzo_block);
 
-    enzo_block->compute_done();
-
     if (simulation)
       simulation->performance()->stop_region(perf_grackle,__FILE__,__LINE__);
   #endif
   }
+
+  block->compute_done();
 
   return;
 
@@ -272,12 +273,15 @@ void EnzoMethodGrackle::setup_grackle_units (EnzoBlock * enzo_block,
 //--------------------------------------------------------------------------
 
 void EnzoMethodGrackle::setup_grackle_fields(EnzoBlock * enzo_block,
+  // Setup Grackle field struct for storing field data that will be passed
+  // into Grackle. Initialize fields, if true, will also assign values to
+  // the fields (equal to uniform background values). This is meant to be
+  // used at initialization, and is by default false.
                                              grackle_field_data * grackle_fields_,
                                              int i_hist /*default 0 */
                                              ) throw()
   {
 
-  // Setup Grackle field struct for storing field data
   Field field = enzo_block->data()->field();
 
   int gx,gy,gz;
@@ -472,6 +476,8 @@ void EnzoMethodGrackle::compute_ ( EnzoBlock * enzo_block) throw()
   if (enzo_config->initial_grackle_test_reset_energies){
     this->ResetEnergies(enzo_block);
   }
+
+  delete_grackle_fields(&grackle_fields_);
 
   return;
 }
