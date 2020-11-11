@@ -3,7 +3,7 @@
 c=======================================================================
 c///////////////////////  SUBROUTINE CALC_EIGEN  \\\\\\\\\\\\\\\\\\\\\\\\\
 c
-      subroutine calc_eigen_dev(dslice, cs, is, ie, idim, lem, rem)
+      subroutine calc_eigen(dslice, cs, is, ie, idim, lem, rem)
 c
 c  COMPUTES THE LEFT AND RIGHT EIGENMATRICES FOR ADIABATIC HYDRODYNAMICS
 c
@@ -26,6 +26,7 @@ c
 c-----------------------------------------------------------------------
 c
       implicit NONE
+#define FORTRAN
 #include "fortran_types.h"
 c
 c     Arguments

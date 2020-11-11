@@ -58,14 +58,6 @@ enum {
   index_turbulence_maxd,
   max_turbulence_array };
 
-#ifdef CONFIG_NEW_CHARM
-#   define BASE_ENZO_BLOCK      CBase_EnzoBlock
-#   define BASE_ENZO_SIMULATION CBase_EnzoSimulation
-#else
-#   define BASE_ENZO_BLOCK      Block
-#   define BASE_ENZO_SIMULATION Simulation
-#endif
-
 //----------------------------------------------------------------------
 
 enum enzo_sync_id {
@@ -118,35 +110,6 @@ enum enzo_sync_id {
 #include "enzo_fortran.hpp"
 #include "enzo_reductions.hpp"
 
-//----------------------------------------------------------------------
-
-enum bc_enum 
-  { // explicitly enumerated to match what Enzo expects
-    bc_unknown    = 0, 
-    bc_reflecting = 1, 
-    bc_outflow    = 2, 
-    bc_inflow     = 3, 
-    bc_periodic   = 4 
-  };
-
-//----------------------------------------------------------------------
-
-enum hydro_type 
-  {
-    hydro_unknown,
-    hydro_ppm,
-    hydro_ppml
-  };
-
-//----------------------------------------------------------------------
-
-enum pm_type {
-  pm_type_unknown,
-  pm_type_cic,  // cloud-in-cell
-  pm_type_ngp,  // nearest grid point
-  pm_type_tsc   // triangular shape cloud
-};
-  
 //----------------------------------------------------------------------
 
 enum return_enum {

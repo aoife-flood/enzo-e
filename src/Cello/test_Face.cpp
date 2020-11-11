@@ -2,15 +2,13 @@
 
 /// @file     test_Face.cpp
 /// @author   James Bordner (jobordner@ucsd.edu)
-/// @date     2010-04-02
+/// @date     2020-04-02
 /// @brief    Test program for the Face class
 
 #include "main.hpp"
 #include "test.hpp"
 
 #include "mesh.hpp"
-
-#include "test_setup_face.hpp"
 
 PARALLEL_MAIN_BEGIN
 {
@@ -19,173 +17,109 @@ PARALLEL_MAIN_BEGIN
 
   unit_init(0,1);
 
-  unit_class("Face");
+  unit_class("FaceFluxes");
 
-  // level of block for index 1 and 2
+  struct face_test_type {
+    int child[3];
+    int size[3];
+    int centered[3];
+    double cell_width[3];
+    double time_step_1;
+    double time_step_2;
+  } test =
+      {
+       { 0, 0, 0},
+       {10, 6, 8 },
+       { 0, 0, 0},
+       { 0.25, 0.5, 1.0},
+       0.125, 0.125
+      };
 
- 
-  Face * prev_A = nullptr;
-  Face * prev_B = nullptr;
+  const int num_face[2] = {4,6};
+  const int face[][3] =
+    {{+1,0,0},
+     {-1,0,0},
+     {0,+1,0},
+     {0,-1,0},
+     {0,0,+1},
+     {0,0,-1}};
 
-  for (int index_test=0; index_test<test::num_face_tests; index_test++) {
+  const int num_normal=2;
+  const int normal[] = {+1,-1};
 
-    CkPrintf ("Running test %d\n",index_test);
-    Index i1 = test::create_index ( test::face_test[index_test].levels_1,
-                              test::face_test[index_test].array_1,
-                              test::face_test[index_test].tree_1);
-    Index i2 = test::create_index ( test::face_test[index_test].levels_2,
-                              test::face_test[index_test].array_2,
-                              test::face_test[index_test].tree_2);
-
-    const int rank = test::face_test[index_test].rank;
-    
-    const int ax = test::face_test[index_test].array[0];
-    const int ay = test::face_test[index_test].array[1];
-    const int az = test::face_test[index_test].array[2];
-    const int px = test::face_test[index_test].periodic[0];
-    const int py = test::face_test[index_test].periodic[1];
-    const int pz = test::face_test[index_test].periodic[2];
-    const int ox = test::face_test[index_test].offset[0];
-    const int oy = test::face_test[index_test].offset[1];
-    const int oz = test::face_test[index_test].offset[2];
-    const int NX = test::face_test[index_test].NX;
-    const int NY = test::face_test[index_test].NY;
-    const int NZ = test::face_test[index_test].NZ;
-    const int face = test::face_test[index_test].face;
-    const int axis = test::face_test[index_test].axis;
-    const int l_degenerate = test::face_test[index_test].l_degenerate;
-
-    const int fx = 0;
-    const int fy = 0;
-    const int fz = 0;
-    
-    Face * face_A = new Face (i1,i2,rank,ax,ay,az,px,py,pz,fx,fy,fz);
-    Face * face_B = new Face (i2,i1,rank,ax,ay,az,px,py,pz,fx,fy,fz);
-
-    face_A->set_normal(axis,face);
-    face_B->set_normal(axis,-face);
-
-    //--------------------------------------------------
-
-    unit_func ("Face()");
-
-    unit_assert (face_A != NULL);
-    unit_assert (face_B != NULL);
-
-    unit_assert ((*face_A) == (*face_A));
-    unit_assert ((*face_A) == (*face_B)); 
-    unit_assert ((*face_B) == (*face_A));
-    unit_assert ((*face_B) == (*face_B));
+  const int num_level = 3;
+  const int level_1[] = {1,2,3};
+  const int level_2[] = {1,3,2};
   
-    //--------------------------------------------------
+  for (int rank = 2; rank <=3; ++rank) {
+    for (int iaxis=0; iaxis<rank; iaxis++) {
+      for (int iface=0; iface<2; ++iface) {
+        for (int ilevel=0; ilevel<num_level; ++ilevel) {
+        
+          const int L_1 = level_1[ilevel];
+          const int L_2 = level_2[ilevel];
+          int n3[3];
+          n3[0] = test.size[0];
+          n3[1] = (rank >= 2) ? test.size[1]:1;
+          n3[2] = (rank >= 3) ? test.size[2]:1;
+          int c3[3];
+          c3[0] = test.centered[0];
+          c3[1] = (rank >= 2) ? test.centered[1] : 0;
+          c3[2] = (rank >= 3) ? test.centered[2] : 0;
+          double h3_1[3];
+          h3_1[0] = test.cell_width[0];
+          h3_1[1] = (rank >= 2) ? test.cell_width[1] : 0;
+          h3_1[2] = (rank >= 3) ? test.cell_width[2] : 0;
+          double h3_2[3] = {h3_1[0],h3_1[1],h3_1[2]};
+          
+          const double dt1 =  test.time_step_1;
+          double dt2 =  test.time_step_2;
+          const int cx = test.child[0];
+          const int cy = (rank >= 2) ? test.child[1] : 0;
+          const int cz = (rank >= 3) ? test.child[2] : 0;
 
-    unit_func ("index_block()");
-
-    unit_assert (face_A->index_block() == i1);
-    unit_assert (face_B->index_block() == i2);
-
-    if (i1 != i2) {
-      unit_assert (face_A->index_block() != i2);
-      unit_assert (face_B->index_block() != i1);
-    }
-  
-    //--------------------------------------------------
-
-    unit_func ("index_neighbor()");
-
-    unit_assert (face_A->index_neighbor() == i2);
-    unit_assert (face_B->index_neighbor() == i1);
-    if (i1 != i2) {
-      unit_assert (face_A->index_neighbor() != i1);
-      unit_assert (face_B->index_neighbor() != i2);
-    }
-  
-    //--------------------------------------------------
-
-    unit_func ("get_subface()");
-
-    int f1x,f1y,f1z;
-    int f2x,f2y,f2z;
-
-    face_A->get_subface(&f1x,&f1y,&f1z);
-    face_B->get_subface(&f2x,&f2y,&f2z);
-
-    unit_assert (f1x == 0);
-    unit_assert (f1y == 0);
-    unit_assert (f1z == 0);
-    unit_assert (f2x == 0);
-    unit_assert (f2y == 0);
-    unit_assert (f2z == 0);
-
-    //--------------------------------------------------
-
-    unit_func ("get_adjacency()");
-
-    bool lx,ly,lz;
-    face_A->adjacency(&lx,&ly,&lz);
-
-    unit_assert ((lx && axis != 0) || (!lx && axis==0));
-    unit_assert ((ly && axis != 1) || (!ly && axis==1));
-    unit_assert ((lz && axis != 2) || (!lz && axis==2));
+          if (L_1 < L_2) { h3_2[0]*=0.5; h3_2[1]*=0.5; h3_2[2]*=0.5; dt2*=0.5;}
+          if (L_1 > L_2) { h3_2[0]*=2.0; h3_2[1]*=2.0; h3_2[2]*=2.0; dt2*=2.0;}
+          int fx = iaxis==0 ? iface*2-1 : 0;
+          int fy = iaxis==1 ? iface*2-1 : 0;
+          int fz = iaxis==2 ? iface*2-1 : 0;
+          
+          Face * face_1 = new Face( fx, fy, fz,iaxis,iface);
+          Face * face_2 = new Face(-fx,-fy,-fz,iaxis,iface);
+          //--------------------------------------------------
     
-    //--------------------------------------------------
-
-    unit_func ("get_offset()");
-
-    int ix0, iy0, iz0;
-    face_A->get_offset(&ix0,&iy0,&iz0, NX,NY,NZ);
-
-    if (ix0 != ox*NX/2) {
-      CkPrintf ("DEBUG_OFFSET X %d != %d\n",ix0,ox*NX/2);
-    }
-    if (iy0 != oy*NY/2) {
-      CkPrintf ("DEBUG_OFFSET Y %d != %d\n",iy0,oy*NY/2);
-    }
-    if (iz0 != oz*NZ/2) {
-      CkPrintf ("DEBUG_OFFSET Z %d != %d\n",iz0,oz*NZ/2);
-    }
-
-    unit_assert (ix0 == ox*NX/2);
-    unit_assert (iy0 == oy*NY/2);
-    unit_assert (iz0 == oz*NZ/2);
-    //--------------------------------------------------
-
-    unit_func ("operator < ()");
-
-    unit_assert ( ((*face_A) < (*face_A)) == false);
-    unit_assert ( ! (((*face_A) < (*face_B)) && ((*face_B) < (*face_A))) );
-    unit_assert ( ((l_degenerate && ((*face_A) == (*face_B)))
-                   || (((*face_A) < (*face_B)) || ((*face_B) < (*face_A)))));
-    unit_assert ( ! (((*face_A) < (*face_B)) && ((*face_B) < (*face_A))));
-
-    //--------------------------------------------------
-
-    unit_func ("operator == ()");
-
-    unit_assert ( ((*face_A) == (*face_A)));
-    unit_assert ( ((*face_A) == (*face_B)));
-    unit_assert ( ((*face_B) == (*face_A)));
-    if (prev_A != nullptr) {
-      unit_assert ( ! ((*prev_A) == (*face_A)));
-      unit_assert ( ! ((*prev_A) == (*face_B)));
-      unit_assert ( ! ((*face_A) == (*prev_A)));
-      unit_assert ( ! ((*face_B) == (*prev_A)));
-    }
-    if (prev_B != nullptr) {
-      unit_assert ( ! ((*prev_B) == (*face_A)));
-      unit_assert ( ! ((*prev_B) == (*face_B)));
-      unit_assert ( ! ((*face_A) == (*prev_B)));
-      unit_assert ( ! ((*face_B) == (*prev_B)));
-    }
-    delete prev_A;
-    delete prev_B;
-    prev_A = face_A;
-    prev_B = face_B;
+          unit_func ("Face()");
     
+          unit_assert (face_1 != nullptr);
+          unit_assert (face_2 != nullptr);
+    
+          //--------------------------------------------------
 
-  }
-  delete prev_A;
-  delete prev_B;
+          unit_func("face()");
+
+          int ix1,iy1,iz1;
+          int ix2,iy2,iz2;
+
+          face_1->get_face(&ix1,&iy1,&iz1);
+          face_2->get_face(&ix2,&iy2,&iz2);
+
+          unit_assert((ix1 == -ix2));
+          unit_assert((iy1 == -iy2));
+          unit_assert((iz1 == -iz2));
+
+          unit_assert(std::abs(ix1) + std::abs(ix2) == 2*(iaxis==0)?1:0);
+          unit_assert(std::abs(iy1) + std::abs(iy2) == 2*(iaxis==1)?1:0);
+          unit_assert(std::abs(iz1) + std::abs(iz2) == 2*(iaxis==2)?1:0);
+
+          //--------------------------------------------------
+
+          delete face_1;
+          delete face_2;
+
+        } // ilevel
+      } // iface
+    } // iaxis
+  } // rank
 
   unit_finalize();
 

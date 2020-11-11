@@ -25,7 +25,8 @@ inline void operator|(PUP::er &p, chemistry_data &c){
  p | c.metal_cooling;
  p | c.UVbackground;
 
- int length = (c.grackle_data_file == NULL) ? 0 : strlen(c.grackle_data_file);
+ bool skip_strlen = (p.isUnpacking() || c.grackle_data_file == NULL);
+ int length = (skip_strlen) ? 0 : strlen(c.grackle_data_file);
  p | length;
  if (length > 0){
    if (p.isUnpacking()){
@@ -309,6 +310,9 @@ public: // interface
       method_pm_deposit_alpha(0.5),
       // EnzoMethodPmUpdate
       method_pm_update_max_dt(0.0),
+      // EnzoProlong
+      prolong_enzo_type(),
+      prolong_enzo_positive(true),
       // EnzoSolverMg0
       solver_pre_smooth(),
       solver_post_smooth(),
@@ -521,11 +525,11 @@ public: // attributes
   /// EnzoProlong
   std::string                interpolation_method;
 
-  /// EnzoMethodHeat
-  double                     method_heat_alpha;
-
   /// EnzoMethodCheckGravity
   std::string                method_check_gravity_particle_type;
+  
+  /// EnzoMethodHeat
+  double                     method_heat_alpha;
 
   /// EnzoMethodHydro
   std::string                method_hydro_method;
@@ -614,6 +618,9 @@ public: // attributes
 
   double                     method_pm_update_max_dt;
 
+  std::string                prolong_enzo_type;
+  bool                       prolong_enzo_positive;
+  
   ///==============
   /// EnzoSolverMg0
   ///==============

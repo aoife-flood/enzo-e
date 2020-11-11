@@ -58,11 +58,12 @@ namespace enzo {
   EnzoProblem * problem();
   EnzoSimulation * simulation();
   EnzoPhysicsCosmology * cosmology();
+  const EnzoMethodGrackle * grackle_method();
   EnzoUnits * units();
   const EnzoConfig * config();
   CProxy_EnzoBlock block_array();
   EnzoBlock * block ( Block * block);
-};
+}
 
 extern CProxy_EnzoSimulation proxy_enzo_simulation;
 extern void mutex_init();

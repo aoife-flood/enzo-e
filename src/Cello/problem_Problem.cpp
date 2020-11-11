@@ -580,9 +580,8 @@ Boundary * Problem::create_boundary_
   } else if (type == "periodic") {
 
     axis_enum axis = (axis_enum) config->boundary_axis[index];
-    face_enum face = (face_enum) config->boundary_face[index];
 
-    return new BoundaryPeriodic(axis,face);
+    return new BoundaryPeriodic(axis);
 
   }
   return NULL;
@@ -788,6 +787,16 @@ Physics * Problem::physics (std::string type) const throw()
 
 //----------------------------------------------------------------------
 
+Method * Problem::method (std::string name) const throw()
+{
+  for (size_t i=0; i<method_list_.size(); i++) {
+    if (method_list_[i]->name() == name) return method_list_[i];
+  }
+  return NULL;
+}
+
+//----------------------------------------------------------------------
+
 Compute * Problem::create_compute
   ( std::string name,
     Config * config ) throw ()
@@ -823,7 +832,13 @@ Method * Problem::create_method_
   } else if (name == "flux_correct") {
 
     method = new MethodFluxCorrect
-      (config->method_flux_correct_group[index_method]);
+      (config->method_flux_correct_group[index_method],
+       config->method_flux_correct_enable[index_method],
+       config->method_flux_correct_min_digits[index_method]);
+
+  } else if (name == "debug") {
+
+    method = new MethodDebug (config->num_fields);
 
   } else if (name == "close_files") {
 
