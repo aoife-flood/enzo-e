@@ -70,7 +70,7 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
 
   double dx, dy, dz;
   block->cell_width(&dx, &dy, &dz);
-
+  
   double lx, ly, lz;
   block->lower(&lx,&ly,&lz);
   accretion_radius_cells_ = enzo_config->method_star_maker_accretion_radius_cells;
@@ -80,6 +80,7 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   const int it   = particle.type_index (this->particle_type());
 
   const int ia_m = particle.attribute_index (it, "mass");
+  const int ia_pm = particle.attribute_index (it, "prevmass");
   const int ia_x = particle.attribute_index (it, "x");
   const int ia_y = particle.attribute_index (it, "y");
   const int ia_z = particle.attribute_index (it, "z");
@@ -91,13 +92,16 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   const int ia_metal = particle.attribute_index (it, "metal_fraction");
   const int ia_to    = particle.attribute_index (it, "creation_time");
   const int ia_l     = particle.attribute_index (it, "lifetime");
+  const int ia_timeindex = particle.attribute_index (it, "timeindex");
+  const int ia_class = particle.attribute_index (it, "class");
   const int ia_accrate = particle.attribute_index (it, "accretion_rate");
   const int ia_accrate_time = particle.attribute_index (it, "accretion_rate_time");
   int ib  = 0; // batch counter
   int ipp = 0; // counter
-
+  
   /// pointers for particle attribute arrays (later)
   enzo_float * pmass = 0;
+  enzo_float * prevmass = 0;
   enzo_float * px   = 0;
   enzo_float * py   = 0;
   enzo_float * pz   = 0;
@@ -108,18 +112,11 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   enzo_float * pmetal = 0;
   enzo_float * pform  = 0;
   enzo_float * plifetime = 0;
-#ifdef SCALAR
+  int        * ptimeindex = 0;
+  int        * pclass     = 0;
   enzo_float * paccrate = 0;
   enzo_float * paccrate_time = 0;
-#endif
-#ifdef ARRAY
-  enzo_float **paccrate = NULL;
-  enzo_float **paccrate_time = NULL;
-  paccrate = new enzo_float * [SS_NTIMES];
-  paccrate_time = new enzo_float * [SS_NTIMES];
-  //enzo_float **paccrate = new enzo_float * [SS_NTIMES];
-  // enzo_float **paccrate_time = new enzo_float * [SS_NTIMES];
-#endif
+
   // obtain the particle stride length
   const int ps = particle.stride(it, ia_m);
 
@@ -302,8 +299,9 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
         int io = ipp; // ipp*ps
         // pointer to mass array in block
         pmass = (enzo_float *) particle.attribute_array(it, ia_m, ib);
-
+	prevmass = (enzo_float *) particle.attribute_array(it, ia_pm, ib);
         pmass[io] = density[i] * dx * dy * dz;
+	prevmass[io] = pmass[io];
         px = (enzo_float *) particle.attribute_array(it, ia_x, ib);
         py = (enzo_float *) particle.attribute_array(it, ia_y, ib);
         pz = (enzo_float *) particle.attribute_array(it, ia_z, ib);
@@ -330,35 +328,38 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
 
         pform[io]     =  enzo_block->time();   // formation time
         plifetime[io] =  10.0 * cello::Myr_s / enzo_units->time() ; // lifetime
-	/* I think we need to put the accretion and accretion_time arrays in here */
-	/* The accretion rate and accretion rate times are arrays which hang off
-	 * the particle object. Most other attributes are scalars
-	*/
-#ifdef ARRAY
-	CkPrintf("io = %d\n", io);
-	CkPrintf("paccrate[%d] = %p\n", io, paccrate[io]);
-	paccrate[io] = (enzo_float *) particle.attribute_array(it, ia_accrate, ib);
-        paccrate_time[io] = (enzo_float *) particle.attribute_array(it, ia_accrate_time, ib);
-	CkPrintf("paccrate[%d] = %p\n", io, paccrate[io]);
-	for(int k = 0; k < SS_NTIMES; k++) {
-	  paccrate[io][k] = 0.0;
-	  //paccrate_time[io][k] = 0.0;
-	}
-	CkPrintf("paccrate[%d][10] = %f\n", io, paccrate[io][10]);
-	CkExit(-2);
-#endif
-#ifdef SCALAR
+
 	paccrate = (enzo_float *) particle.attribute_array(it, ia_accrate, ib);
         paccrate_time = (enzo_float *) particle.attribute_array(it, ia_accrate_time, ib);
-	paccrate[io] = 0.0;
-	paccrate_time[io] = 0.0;
-#endif
+	ptimeindex = (int *) particle.attribute_array(it, ia_timeindex, ib);
+	ptimeindex[io] = 0;
+	pclass = (int *) particle.attribute_array(it, ia_class, ib);
+	pclass[io] = SMS;  //see star_type enum in _enzo.hpp
+	*(&paccrate[io]) = 0.0; // I don't count formation as accretion per se
+	*(&paccrate_time[io]) = pform[io];
+	
+	CkPrintf("it = %d\t ia_accrate = %d\t ib = %d\n", it, ia_accrate, ib);
+	CkPrintf("offset = 1: accrate + offset  = %p \n", &paccrate[io] + sizeof(enzo_float));
+	CkPrintf("io = %d: accrate address = %p %p %p\n", io,
+		 paccrate, &paccrate[io], &(paccrate[io]));
+	CkPrintf("%d: accrate address = %p (*accrate = %f)\n", 0, &(paccrate[io]), *(&paccrate[io]));
+	/* Starting point of accretion rate pointer for this particle */
+	paccrate = &paccrate[io];
+	paccrate_time = &paccrate_time[io];
+	paccrate += sizeof(enzo_float);
+	paccrate_time += sizeof(enzo_float);
+	CkPrintf("%d: accrate address = %p (*accrate = %f)\n", 0, paccrate, *paccrate);
+	/* Now initialise the array from this offset point onwards */
+	for(int k = 1; k < SS_NTIMES; k++, paccrate++, paccrate_time++) {
+	  *paccrate = k;
+	  *paccrate_time = k;
+	  CkPrintf("%d: accrate address = %p (*accrate = %f)\n", k, paccrate, *paccrate);
+	 
+	}
         if (metal){
           pmetal     = (enzo_float *) particle.attribute_array(it, ia_metal, ib);
           pmetal[io] = metal[i] / density[i];
         }
-
-	
 	
 	
         // Remove mass from grid and rescale fraction fields

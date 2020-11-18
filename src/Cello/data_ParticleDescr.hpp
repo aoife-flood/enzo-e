@@ -92,7 +92,7 @@ public: // interface
 
   /// Create a new attribute for the given type and return its id
 
-  int new_attribute(int it, std::string name, int type);
+  int new_attribute(int it, std::string name, int type, int arraysize);
 
   /// Return the number of attributes of the given type.
 
@@ -137,6 +137,9 @@ public: // interface
 
   /// Return the data type of the given attribute.
   int attribute_type (int it,int ia) const;
+
+  /// Return the data size of the given attribute.
+  int attribute_arraysize (int it,int ia) const;
 
   /// Return the number of bytes allocated for the given attribute.
   int attribute_bytes (int it,int ia) const;
@@ -256,6 +259,9 @@ private: // attributes
   /// scalar types are in type_enum defined in cello.hpp
   std::vector < std::vector<int> > attribute_type_;
 
+  /// scalar type for each particle containing the array size of each attribute.
+  std::vector < std::vector<int> > attribute_arraysize_;
+  
   /// Attributes that define particle positions
   std::vector < std::vector <int> > attribute_position_;
 

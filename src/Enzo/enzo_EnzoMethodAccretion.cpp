@@ -8,7 +8,7 @@
 
 #include "cello.hpp"
 #include "enzo.hpp"
-
+#define UPDATE_STATS 1
 EnzoMethodAccretion::EnzoMethodAccretion
 ()
   : Method()
@@ -100,8 +100,10 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
   enzo_float cosmo_a = 1.0;
   enzo_float accretion_rate = 0.0, accreted_mass = 0.0;
   
-  
-  
+  CkPrintf("ghost depth = %d %d %d\n", gx, gy, gz);
+  CkPrintf("grid dimensions = %d %d %d\n", mx, my, mz);
+  CkPrintf("field size = %d %d %d\n", nx, ny, nz);
+  CkPrintf("field size + ghost = %d %d %d\n", ngx, ngy, ngz);
   
 
   double current_time  = block->time();
@@ -130,7 +132,7 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
     CkPrintf("Found a particle\n");
 
     const int ia_m = particle.attribute_index (it, "mass");
-
+    const int ia_pm = particle.attribute_index (it, "prevmass");
     const int ia_x = (rank >= 1) ? particle.attribute_index (it, "x") : -1;
     const int ia_y = (rank >= 2) ? particle.attribute_index (it, "y") : -1;
     const int ia_z = (rank >= 3) ? particle.attribute_index (it, "z") : -1;
@@ -141,6 +143,8 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
 
     const int ia_l = particle.attribute_index (it, "lifetime");
     const int ia_c = particle.attribute_index (it, "creation_time");
+    const int ia_timeindex = particle.attribute_index (it, "timeindex");
+    const int ia_class = particle.attribute_index (it, "class");
     const int ia_acc = particle.attribute_index (it, "accretion_rate");
     const int ia_acc_time = particle.attribute_index (it, "accretion_rate_time");
     const int dm = particle.stride(it, ia_m);
@@ -155,8 +159,12 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
       enzo_float *px=0, *py=0, *pz=0;
       enzo_float *pvx=0, *pvy=0, *pvz=0;
       enzo_float *plifetime=0, *pcreation=0, *pmass=0, *paccrate=0, *paccrate_time=0;
-
+      enzo_float *prevmass=0;
+      int *ptimeindex=0, *pclass=0;
+      prevmass = (enzo_float *) particle.attribute_array(it, ia_pm, ib);
       pmass = (enzo_float *) particle.attribute_array(it, ia_m, ib);
+      ptimeindex = (int *)  particle.attribute_array(it, ia_timeindex, ib);
+      pclass = (int *)  particle.attribute_array(it, ia_class, ib);
       paccrate = (enzo_float *) particle.attribute_array(it, ia_acc, ib);
       paccrate_time = (enzo_float *) particle.attribute_array(it, ia_acc_time, ib);
       px = (enzo_float *) particle.attribute_array(it, ia_x, ib);
@@ -188,6 +196,7 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
         double yp = (py[ipdp] - ym) / hy;
         double zp = (pz[ipdp] - zm) / hz;
 
+	
         // get 3D grid index for particle - account for ghost zones!!
         int ix = ((int) std::floor(xp))  + gx;
         int iy = ((int) std::floor(yp))  + gy;
@@ -228,9 +237,10 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
 	  kernel_radius = std::max(bondi_hoyle_radius, accretion_radius);
 	}
 
-	int numcells = 0;
+	int numcells = 0, num_ghost_cells = 0;
 	double weighted_sum = 0.0, avg_temp = 0.0, total_gas_mass = 0.0, sum_of_weights = 0.0;
 	/* Calculate cell weights within the accretion zone */
+	/* Also identify if ghost zones fall within the accretion zone. */
 	for (int iz = 0; iz < ngz; iz++){
 	  for (int iy = 0; iy < ngy; iy++){
 	    for (int ix = 0; ix < ngx; ix++){
@@ -239,6 +249,7 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
 	      double posx = xm + (ix - gx + 0.5) * dx;
 	      double posy = ym + (iy - gy + 0.5) * dy;
 	      double posz = zm + (iz - gz + 0.5) * dz;
+	      
 	      /* Calculate distance from cells to the particle. I need 
 	       * to do this to weight each cells contribution */
 	      double dist2 = pow((px[ipdp] - posx), 2.0) +
@@ -251,12 +262,26 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
 		avg_temp += temperature[cellindex];
 		total_gas_mass += d[cellindex]*vol;
 		numcells++;
+		/*cells in ghost zone*/
+		if(ix < gx || ix >(nx+gx) ||
+		   iy < gy || iy >(ny+gy) ||
+		   iz < gz || iz >(nz+gz))
+		  {
+		    CkPrintf("So Cell %d %d %d is inside Accretion zone\n", ix, iy, iz);
+		    num_ghost_cells++;
+		  }
+		
+		
 	      }
 	    }
 	  }
 	}
 	CkPrintf("numcells = %d\n", numcells);
 	CkPrintf("total_gas_mass = %e Msun\n", total_gas_mass/cello::mass_solar);
+	if(num_ghost_cells > 0) {
+	  CkPrintf("num_ghost_cells = %d\n", num_ghost_cells);
+	  CkExit(-99);
+	}
 	double weight = 1.0/numcells;
 	double avg_density = weighted_sum / sum_of_weights;
 	const double mean_particle_mass = cello::mass_hydrogen*enzo_config->ppm_mol_weight;
@@ -338,51 +363,69 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
 	    CkPrintf("Weird - the previous mass is greater than the current mass....\n");
 	    CkExit(-99);
 	  }
-	  ptimeindex[ipdp]++;
-	  int timeindex = (ptimeindex)%NTIMES;
-	  int otimeindex = timeindex - 1;
-	  if(otimeindex == -1) //loop back
-	    otimeindex = NTIMES -1;
-	  enzo_float otime = prevaccratetime[prevtimeindex];
-	  if(otime == -1.0) {
-	    otimeindex = 0;
-	    otime = prevaccratetime[0];
-	  }
+	  int offset=ptimeindex[ipdp];
+	  enzo_float otime = *(&(paccrate_time[ipdp])+sizeof(enzo_float)*offset);
+	  enzo_float ctime = current_time;
+	  //int ctimeindex = (ptimeindex[ipdp]++)%SS_NTIMES;
+	  //int otimeindex = ctimeindex - 1;
+	  //if(otimeindex == -1) //loop back
+	  //  otimeindex = SS_NTIMES -1;
+
 	  enzo_float deltatime = ctime - otime;
 	  enzo_float accrate = (cmass - omass)/deltatime;
+	  /* Which timeindex do we want to update */
+	  
 
-	  paccrate[ipdp][timeindex] = accrate;
-	  paccratetime[ipdp][timeindex] = ctime;
+	  CkPrintf("Setting with accrate = %e\t accrate_time = %e\n", accrate, ctime);
+	  /* Do the updates */
+	  *(&paccrate[ipdp] + sizeof(enzo_float)*ptimeindex[ipdp]) = accrate;
+	  *(&paccrate_time[ipdp] + sizeof(enzo_float)*ptimeindex[ipdp]) = ctime;
+	  ptimeindex[ipdp]++;
+	  for(int i = 0; i <= offset; i++) {
+	    CkPrintf("%d: paccrate =  %p\t *paccrate = %e\n", i,
+		     &paccrate[ipdp] + sizeof(enzo_float)*i,
+		     (*(&paccrate[ipdp] + sizeof(enzo_float)*i))*cello::yr_s/cello::mass_solar);
+	    CkPrintf("%d: accrate_time = %p\t *paccrate_time = %e\n", i, &paccrate_time[ipdp] +
+		     sizeof(enzo_float)*i,
+		     (*(&paccrate_time[ipdp] + sizeof(enzo_float)*i))/cello::kyr_s);
+	  }
+	 
+
 	  prevmass[ipdp] = cmass;
-	  ptimeindex = timeindex;
-	  CkPrintf("old_mass = %e Msolar\t cmass = %e Msolar\n", omass/cello::solar_mass,
-		   cmass/cello::solar_mass);
-	  CkPrintf("accrate = %e Msolar/yr\t accratetime = %e yrs \t " \
-		   "deltatime = %f yrs\t index = %d\t Particle Mass = %e Msolar\t Class = %d\n",
-		   paccrate[ipdp][timeindex]*cello::yr_s/cello::solar_mass,
-		   paccratetime[ipdp][timeindex]/cello::yr_s,
-		   deltatime/cello::yr_s,
-		   ptimeindex[ipdp],
-		   pmass[ipdp],
+
+	  CkPrintf("old_mass = %e Msolar\t cmass = %e Msolar\t DeltaM = %f\n",
+		   omass/cello::mass_solar,
+		   cmass/cello::mass_solar,
+		   (cmass - omass)/cello::mass_solar);
+	  CkPrintf("old_time = %e kyr\t ctime = %e kyr\t DeltaT = %e kyr\n",
+		   otime/cello::kyr_s,
+		   ctime/cello::kyr_s,
+		   (ctime - otime)/cello::kyr_s);
+	  CkPrintf("accrate = %e Msolar/yr\t accratetime = %e kyr \t " \
+		   "deltatime = %f kyr\t index = %d\t Particle Mass = %e Msolar\t Class = %d\n",
+		   accrate*cello::yr_s/cello::mass_solar,
+		   ctime/cello::kyr_s,
+		   deltatime/cello::kyr_s,
+		   offset,
+		   pmass[ipdp]/cello::mass_solar,
 		   pclass[ipdp]);
-	  if(paccrate[ipdp][timeindex]*cello::yr_s/cello::solar_mass > CRITICAL_ACCRETION_RATE) {
+	  if(accrate*cello::yr_s/cello::mass_solar > CRITICAL_ACCRETION_RATE) {
 	    pclass[ipdp] = SMS;
 	  }
 	  else {
-	    float Age = block->time() - pcreationtime[ipdp];
+	    float Age = block->time() - pcreation[ipdp];
 	    if(Age/cello::yr_s > 1e4) { /* Don't do this at very start */
 	      CkPrintf("%s: WARNING: ParticleClass switching from SMS to POPIII " \
 		       " (deltatime = %f kyrs)\n", __FUNCTION__,
 		       deltatime*(cello::yr_s*1e3));
 	      CkPrintf("%s: WARNING: Accretion Rate = %f Msolar/yr. Critical rate = %f Msolar/yr\n",
 		       __FUNCTION__,
-		       (paccrate[ipdp][timeindex]*cello::yr_s/cello::solar_mass),
+		       (accrate*cello::yr_s/cello::mass_solar),
 		       CRITICAL_ACCRETION_RATE);
-	      pclass[ipdp] = POPIII;
+	      pclass[ipdp] = popIII;
 	    }
+	    CkPrintf("Age = %e kyr\t Time = %e kyr", Age/cello::kyr_s, block->time()/cello::kyr_s);
 	  }
-	  CkPrintf("Age = %e\t Time = %e", block->age()/cello::yr_s, block->time()/cello::yr_s);
-	  CkExit(-99);
 	}
 	
 #endif

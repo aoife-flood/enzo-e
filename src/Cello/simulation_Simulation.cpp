@@ -584,6 +584,7 @@ void Simulation::initialize_data_descr_() throw()
   // ... first map attribute scalar type name to type_enum int
   std::map<std::string,int> type_val;
   for (int i=0; i<NUM_TYPES; i++) {
+    CkPrintf("%d: name = %s\n", i, cello::type_name[i]);
     type_val[cello::type_name[i]] = i;
   }
 #ifdef CONFIG_PRECISION_SINGLE	
@@ -601,12 +602,13 @@ void Simulation::initialize_data_descr_() throw()
     for (int ic=0; ic<nc; ic++) {
       std::string name = config_->particle_constant_name[it][ic];
       int         type = type_val[config_->particle_constant_type[it][ic]];
+     
       ASSERT3 ("Simulation::initialize_data_descr_()",
 	       "Unknown Particle type \"%s\" constant \"%s\" "
 	       "has unknown type \"%s\"",
 	       config_->particle_list[it].c_str(),
 	       name.c_str(),
-	       config_->particle_attribute_type[it][ic].c_str(),
+	       config_->particle_constant_type[it][ic].c_str(),
 	       cello::type_is_valid(type));
       particle_descr_->new_constant(it,name,type);
       union {
@@ -650,13 +652,15 @@ void Simulation::initialize_data_descr_() throw()
     for (int ia=0; ia<na; ia++) {
       std::string name = config_->particle_attribute_name[it][ia];
       int type         = type_val[config_->particle_attribute_type[it][ia]];
+      CkPrintf("JR: %s: type = %s\n", __FUNCTION__, config_->particle_attribute_type[it][ia].c_str());
       ASSERT3 ("Simulation::initialize_data_descr_()",
 	       "Unknown Particle type \"%s\" attribute \"%s\" has unknown type \"%s\"",
 	       config_->particle_list[it].c_str(),
 	       name.c_str(),
 	       config_->particle_attribute_type[it][ia].c_str(),
 	       cello::type_is_valid(type));
-      particle_descr_->new_attribute(it,name,type);
+      int arraysize = config_->particle_attribute_arraysize[it][ia];
+      particle_descr_->new_attribute(it,name,type,arraysize);
     }
 
     // position and velocity attributes
