@@ -16,7 +16,7 @@
 
 int FofList(int, enzo_float *, enzo_float, int *, int **, int ***);
 // #define DEBUG_SF
-#define ARRAY 1
+#define SCALAR 1
 
 //-------------------------------------------------------------------
 
@@ -294,16 +294,19 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
         // now create a star particle
         //    insert_particles( particle_type, number_of_particles )
         int my_particle = particle.insert_particles(it, 1);
+	CkPrintf("My particle = %d. \t it = %d \n",my_particle,it);
 
         // For the inserted particle, obtain the batch number (ib)
         //  and the particle index (ipp)
         particle.index(my_particle, &ib, &ipp);
+	CkPrintf("ib = %d, ipp = %d\n",ib,ipp);
 
         int io = ipp; // ipp*ps
         // pointer to mass array in block
         pmass = (enzo_float *) particle.attribute_array(it, ia_m, ib);
 
         pmass[io] = density[i] * dx * dy * dz;
+	CkPrintf("pmass[%d] = %g\n",io,pmass[io]);
         px = (enzo_float *) particle.attribute_array(it, ia_x, ib);
         py = (enzo_float *) particle.attribute_array(it, ia_y, ib);
         pz = (enzo_float *) particle.attribute_array(it, ia_z, ib);
@@ -315,6 +318,7 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
         px[io] = lx + (ix - gx + 0.5) * dx;
         py[io] = ly + (iy - gy + 0.5) * dy;
         pz[io] = lz + (iz - gz + 0.5) * dz;
+	
 
         pvx = (enzo_float *) particle.attribute_array(it, ia_vx, ib);
         pvy = (enzo_float *) particle.attribute_array(it, ia_vy, ib);
@@ -342,10 +346,10 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
 	CkPrintf("paccrate[%d] = %p\n", io, paccrate[io]);
 	for(int k = 0; k < SS_NTIMES; k++) {
 	  paccrate[io][k] = 0.0;
-	  //paccrate_time[io][k] = 0.0;
+	  //CkPrintf("paccrate_time[%d][%d] = %g\n",io,k,paccrate[io][k]);
 	}
 	CkPrintf("paccrate[%d][10] = %f\n", io, paccrate[io][10]);
-	CkExit(-2);
+	//CkExit(-2);
 #endif
 #ifdef SCALAR
 	paccrate = (enzo_float *) particle.attribute_array(it, ia_accrate, ib);

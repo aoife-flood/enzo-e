@@ -15,9 +15,9 @@
  }
 
  Domain {
-     lower = [ -1.54285000000000000e+18, -1.54285000000000000e+18, -1.54285000000000000e+18 ];
+     lower = [ -1.0e17, -1.0e17, -1.0e17];
      rank = 3;
-     upper = [ 1.54285000000000000e+18, 1.54285000000000000e+18, 1.54285000000000000e+18 ];
+     upper = [ 1.0e17, 1.0e17, 1.0e17 ];
  }
 
  Field {
@@ -26,7 +26,7 @@
      ghost_depth = 4;
      courant = 0.3;
      history = 1;
-     list = [ "density", "velocity_x", "velocity_y", "velocity_z", "acceleration_x", "acceleration_y", "acceleration_z", "temperature", "total_energy", "internal_energy", "pressure", "density_gas", "density_particle", "density_total", "density_particle_accumulate", "potential", "potential_temp", "potential_copy", "X", "B", "X_copy", "B_copy" ];
+     list = [ "density", "velocity_x", "velocity_y", "velocity_z", "acceleration_x", "acceleration_y", "acceleration_z", "temperature", "total_energy", "internal_energy", "pressure", "density_gas", "density_particle", "density_total", "density_particle_accumulate", "potential", "potential_temp", "potential_copy", "X", "B", "X_copy", "B_copy" ,"particle_mass"];
      padding = 0;
      dual_energy = true;
      diffusion = true;
@@ -35,7 +35,7 @@
  Initial {
      collapse {
          mass = 6.005015897e33;  #3.02 Msolar
-	 radius_relative = 0.016203778;
+	 radius_relative = 0.5; #sphere has radius of 5e16 cm
 	 temperature = 10.0;
 	 density_profile = 2;
 	 truncation_density = 0.0;
@@ -44,9 +44,9 @@
  }
 
  Mesh {
-     root_blocks = [ 4, 4, 4 ];
+     root_blocks = [ 1, 1, 1 ];
      root_rank = 3;
-     root_size = [ 128, 128, 128 ];
+     root_size = [ 128, 128, 128];
  }
 
 
@@ -103,7 +103,7 @@ Particle {
        # run the stochastic star formation algorithm taken from star_maker_ssn in Enzo
        type = "smartstar";                 # select smartstar
        
-       number_density_threshold = 1.2e7;   # in 1/cm^3
+       number_density_threshold = 1e9;   # in 1/cm^3
        use_velocity_divergence  = true ;  # converging flow criterion   (def true)	
        use_jeans_mass           = true ;
 
@@ -133,19 +133,32 @@ Particle {
          image_size = [ 512, 512 ];
          name = [ "ax-%04d.png", "cycle" ];
          schedule {
-             step = 50;
+             step = 10;
              var = "cycle";
          };
          type = "image";
      };
-     dark {
+
+    vx {
+         colormap = [ 0.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 1.000000000000000 ];
+         field_list = [ "velocity_x" ];
+         image_ghost = false;
+         image_size = [ 512, 512 ];
+         name = [ "vx-%04d.png", "cycle" ];
+         schedule {
+             step = 10;
+             var = "cycle";
+         };
+         type = "image";
+     };
+     stars {
          colormap = [ 0.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 1.000000000000000 ];
          image_ghost = false;
          image_size = [ 512, 512 ];
-         name = [ "dark-%04d.png", "cycle" ];
-         particle_list = [ "dark" ];
+         name = [ "stars-%04d.png", "cycle" ];
+         particle_list = [ "star" ];
          schedule {
-             step = 50;
+             step = 10;
              var = "cycle";
          };
          type = "image";
@@ -153,6 +166,7 @@ Particle {
      data {
          dir = [ "Dir_Collapse-GAS-DD2_%04d", "cycle" ];
          field_list = [ "density", "velocity_x", "velocity_y", "velocity_z", "acceleration_x", "acceleration_y", "temperature", "total_energy", "internal_energy", "pressure", "density_total", "potential" ];
+	 particle_list = ["star"];
          name = [ "data-%04d-%04d.h5", "cycle", "proc" ];
          schedule {
              step = 10;
@@ -167,12 +181,12 @@ Particle {
          image_size = [ 512, 512 ];
          name = [ "density-%04d.png", "cycle" ];
          schedule {
-             step = 50;
+             step = 10;
              var = "cycle";
          };
          type = "image";
      };
-     list = [ "ax", "po", "de", "mesh", "data" ];
+     list = [ "ax","vx","stars","de","data"];
      mesh {
          colormap = [ 0.000000000000000, 0.000000000000000, 0.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 0.000000000000000, 1.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 0.000000000000000, 1.000000000000000, 0.000000000000000, 0.000000000000000 ];
          image_max = 6.000000000000000;
@@ -180,7 +194,7 @@ Particle {
          image_type = "mesh";
          name = [ "mesh-%04d.png", "cycle" ];
          schedule {
-             step = 50;
+             step = 1;
              var = "cycle";
          };
          type = "image";
@@ -192,19 +206,19 @@ Particle {
          image_size = [ 512, 512 ];
          name = [ "pmass-%04d.png", "cycle" ];
          schedule {
-             step = 50;
+             step = 10;
              var = "cycle";
          };
          type = "image";
      };
      po {
          colormap = [ 0.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 0.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 0.000000000000000, 1.000000000000000, 1.000000000000000, 1.000000000000000 ];
-         field_list = [ "potential_copy" ];
+         field_list = [ "potential" ];
          image_ghost = false;
          image_size = [ 512, 512 ];
          name = [ "po-%04d.png", "cycle" ];
          schedule {
-             step = 50;
+             step = 10;
              var = "cycle";
          };
          type = "image";
@@ -272,5 +286,5 @@ Particle {
  }
 
  Stopping {
-     cycle = 10000;
+     seconds = 1.0e12;
  }

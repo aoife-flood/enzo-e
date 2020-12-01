@@ -129,6 +129,8 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
 
     CkPrintf("Found a particle\n");
 
+
+    
     const int ia_m = particle.attribute_index (it, "mass");
 
     const int ia_x = (rank >= 1) ? particle.attribute_index (it, "x") : -1;

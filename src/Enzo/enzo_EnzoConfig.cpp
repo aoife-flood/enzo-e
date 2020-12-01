@@ -172,7 +172,7 @@ EnzoConfig::EnzoConfig() throw ()
   method_feedback_ke_fraction(0.0),
   method_feedback_use_ionization_feedback(false),
   method_feedback_time_first_sn(-1), // in Myr
-  // EnzoMethodStarMaker,
+  // EnzoMethodStarMaker
   method_star_maker_type(""),                              // star maker type to use
   method_star_maker_use_density_threshold(true),           // check above density threshold before SF
   method_star_maker_use_velocity_divergence(true),         // check for converging flow before SF
