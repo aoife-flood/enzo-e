@@ -176,6 +176,7 @@ void Config::pup (PUP::er &p)
   p | particle_constant_value;
   p | particle_attribute_name;
   p | particle_attribute_type;
+  p | particle_attribute_arraysize;
   PUParray (p,particle_attribute_position,3);
   PUParray (p,particle_attribute_velocity,3);
   p | particle_batch_size;
@@ -1012,6 +1013,7 @@ void Config::read_particle_ (Parameters * p) throw()
   particle_constant_value.resize(num_particles);
   particle_attribute_name.resize(num_particles);
   particle_attribute_type.resize(num_particles);
+  particle_attribute_arraysize.resize(num_particles);
   particle_attribute_position[0].resize(num_particles);
   particle_attribute_position[1].resize(num_particles);
   particle_attribute_position[2].resize(num_particles);
@@ -1103,6 +1105,7 @@ void Config::read_particle_ (Parameters * p) throw()
 
     particle_attribute_name[it].resize(na);
     particle_attribute_type[it].resize(na);
+    particle_attribute_arraysize[it].resize(na);
 
     std::map <std::string,int> attribute_index;
 
@@ -1111,6 +1114,19 @@ void Config::read_particle_ (Parameters * p) throw()
       std::string name = p->list_value_string (2*ia  ,attrib_str,"unknown");
       std::string type = p->list_value_string (2*ia+1,attrib_str,"unknown");
 
+     
+      /* Parse type if it's an array e.g. double[N] */
+      std::size_t pos1 = type.find("[");
+      std::size_t pos2 = type.find("]");
+      int count = 1;
+      if(pos1 != -1 && pos2 != -1) {
+	CkPrintf("pos1 = %d\t pos2 = %d\n", pos1, pos2);
+       	std::string str_count = type.substr(pos1+1, pos2-pos1-1);
+	type = type.substr(0, pos1);
+	count = stoi(str_count);
+	CkPrintf("type = %s\t count = %d\n", type.c_str(), count);
+      }
+      
       ASSERT3 ("read_particle_",
 	       "Particle type %d attribute %d has unknown attribute name %s",
 	       it,ia,name.c_str(),
@@ -1118,7 +1134,7 @@ void Config::read_particle_ (Parameters * p) throw()
 
       particle_attribute_name[it][ia]  = name;
       particle_attribute_type[it][ia]  = type;
-     
+      particle_attribute_arraysize[it][ia] = count;
       attribute_index[name] = ia;
     }
 

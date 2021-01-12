@@ -16,6 +16,7 @@ arch=$CELLO_ARCH
 prec=$CELLO_PREC
 
 python="python2"
+
 # initialize time
 
 H0=`date +"%H"`
@@ -135,20 +136,24 @@ CELLO_ARCH=$arch; export $CELLO_ARCH
 CELLO_PREC=$prec; export $CELLO_PREC
 
 if [ $target == "test" ]; then
-
+    echo "HERE1!!!!!!!!!!!!"
     echo "$date"     > test/DATE
     echo "$start"    > test/START
     echo "$arch"     > test/ARCH
     echo "$prec"     > test/PREC
 fi    
 
-
+echo "HERE2!!!!!!!!!!!!"
 $python scons.py install-inc    &>  $dir/out.scons
+echo $python
+echo $k_switch
+echo $proc
+echo $target
 $python scons.py $k_switch -j $proc -Q $target  2>&1 | tee $dir/out.scons
-
+echo "HERE3!!!!!!!!!!!!"
 ./tools/awk/error-org.awk   < $dir/out.scons >  errors.org
 ./tools/awk/warning-org.awk < $dir/out.scons >  warnings.org
-
+echo "HERE3!!!!!!!!!!!!"
 if [ -e $target ]; then
    echo "Success"
 else
@@ -163,7 +168,7 @@ printf "done\n" >> $log
 # TESTS
 
 if [ $target == "test" ]; then
-
+    echo "HERE!!!!!!!!!!!!"
     rm -f              test/STOP
 
    # count failures, incompletes, and passes
@@ -234,7 +239,7 @@ if [ $target == "test" ]; then
     file_attempted=test/runs_attempted.$configure
     file_started=test/runs_started.$configure
     file_completed=test/runs_completed.$configure
-
+    echo "JR: attempting ls"
     ls test/test_*.unit                   > $file_attempted
     grep -l "BEGIN" test/test_*.unit      > $file_started
     grep -l "END CELLO"  test/test_*.unit > $file_completed

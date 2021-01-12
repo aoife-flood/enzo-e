@@ -8,7 +8,8 @@
 #ifndef ENZO_ENZO_METHOD_STARMAKER_SMARTSTAR
 #define ENZO_ENZO_METHOD_STARMAKER_SMARTSTAR
 
-#define SS_NTIMES 10000
+#define SS_NTIMES 5
+#define CRITICAL_ACCRETION_RATE 0.04    //Msun/yr see Sakurai et al. (2016)
 ///
 ///
 ///

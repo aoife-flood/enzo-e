@@ -135,6 +135,7 @@ public: // interface
     particle_constant_value(),
     particle_attribute_name(),
     particle_attribute_type(),
+    particle_attribute_arraysize(),
     particle_batch_size(0),
     particle_group_list(),
     performance_papi_counters(),
@@ -291,6 +292,7 @@ public: // interface
       particle_constant_value(),
       particle_attribute_name(),
       particle_attribute_type(),
+      particle_attribute_arraysize(),
       particle_batch_size(0),
       particle_group_list(),
       performance_papi_counters(),
@@ -507,6 +509,7 @@ public: // attributes
 
   std::vector< std::vector <std::string> > particle_attribute_name;
   std::vector< std::vector <std::string> > particle_attribute_type;
+  std::vector< std::vector <int> > particle_attribute_arraysize;
   std::vector <int>          particle_attribute_position[3];
   std::vector <int>          particle_attribute_velocity[3];
 

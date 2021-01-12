@@ -43,7 +43,6 @@ env_mv_test = env.Clone(COPY = 'mv -f test*out test*in ' + test_path)
 env_rm_png  = env.Clone(COPY = 'rm -f *.png')
 
 enzo_bin = bin_path + '/enzo-p'
-
 # h5topng
 
 #----------------------------------------------------------------------
@@ -161,54 +160,12 @@ env.RunSerial('test_Performance.unit', bin_path + '/test_Performance')
 env.RunSerial('test_Papi.unit',        bin_path + '/test_Papi')
 env.RunSerial('test_Timer.unit',       bin_path + '/test_Timer')
 
-#----------------------------------------------------------------------
-# PORTAL COMPONENT        
-#----------------------------------------------------------------------
 
 #----------------------------------------------------------------------
-# PROBLEM COMPONENT        
+# DISK COMPONENT          
 #----------------------------------------------------------------------
+SConscript('DiskComponent/SConscript')
 
-env.RunSerial('test_Refresh.unit', bin_path + '/test_Refresh')
-env.RunSerial('test_Mask.unit',    bin_path + '/test_Mask')
-env.RunSerial('test_Value.unit',   bin_path + '/test_Value')
-
-
-#----------------------------------------------------------------------
-# UNITS COMPONENT        
-#----------------------------------------------------------------------
-
-env.RunSerial('test_EnzoUnits.unit',bin_path + '/test_EnzoUnits')
-
-#----------------------------------------------------------------------
-# SYNC COMPONENT        
-#----------------------------------------------------------------------
-
-env.RunSerial('test_Sync.unit',bin_path + '/test_Sync')
-
-#----------------------------------------------------------------------
-# CELLO
-#----------------------------------------------------------------------
-
-env.RunSerial('test_Type.unit', bin_path + '/test_Type')
-
-#----------------------------------------------------------------------
-# TEST INPUT PARAMETER PARSER
-#----------------------------------------------------------------------
-
-env.RunSerial('test_parse_groups.unit',     bin_path + '/test_Parse', ARGS='input/parse_groups.in')
-env.RunSerial('test_parse_integer.unit',    bin_path + '/test_Parse', ARGS='input/parse_integer.in')
-env.RunSerial('test_parse_list.unit',       bin_path + '/test_Parse', ARGS='input/parse_list.in')
-env.RunSerial('test_parse_logical.unit',    bin_path + '/test_Parse', ARGS='input/parse_logical.in')
-env.RunSerial('test_parse_scalar.unit',     bin_path + '/test_Parse', ARGS='input/parse_scalar.in')
-env.RunSerial('test_parse_include.unit',    bin_path + '/test_Parse', ARGS='input/parse_include.in')
-env.RunSerial('test_parse_implosion.unit',  bin_path + '/test_Parse', ARGS='input/test_implosion.in')
-
-#----------------------------------------------------------------------
-# TEST PROLONG_LINEAR
-#----------------------------------------------------------------------
-
-env.RunSerial('test_prolong_linear.unit',  bin_path + '/test_ProlongLinear')
 
 #----------------------------------------------------------------------
 # TEST FULL APPLICATION
@@ -798,6 +755,7 @@ env.PngToGif("particle-amr-dynamic.gif", "test_particle-amr-dynamic.unit", \
              ARGS = test_path + "/particle-amr-dynamic*.png")
 
 #----------------------------------------------------------------------
+
 
 # Prevent concurrent running of parallel jobs
 

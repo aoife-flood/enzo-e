@@ -103,7 +103,7 @@ else:
         pass
     else:
         prefs.append(d.location)
-
+print("Here!!!!!!!!!!!!!!!!!")
 if sys.platform == 'win32':
     # sys.prefix is (likely) C:\Python*;
     # check only C:\Python*.
@@ -149,7 +149,7 @@ else:
         # sys.prefix is /foo (ends in neither /usr or /local);
         # check only /foo/lib/scons*.
         prefs.append(sys.prefix)
-
+    print("Here1!!!!!!!!!!!!!!!!!")
     temp = [os.path.join(x, 'lib') for x in prefs]
     temp.extend([os.path.join(x,
                                            'lib',
@@ -176,7 +176,7 @@ else:
 # then for 'scons'.
 libs.extend([os.path.join(x, scons_version) for x in prefs])
 libs.extend([os.path.join(x, 'scons') for x in prefs])
-
+print("Here2!!!!!!!!!!!!!!!!!")
 sys.path = libs + sys.path
 
 ##############################################################################
@@ -187,8 +187,9 @@ if __name__ == "__main__":
     import SCons.Script
     # this does all the work, and calls sys.exit
     # with the proper exit status when done.
+    print("Here2.5!!!!!!!!!!!!!!!!!")
     SCons.Script.main()
-
+    print("Here3!!!!!!!!!!!!!!!!!")
 # Local Variables:
 # tab-width:4
 # indent-tabs-mode:nil

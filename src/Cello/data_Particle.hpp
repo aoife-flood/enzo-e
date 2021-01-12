@@ -117,8 +117,8 @@ public: // interface
 
   /// Create a new attribute for the given type and return its id
 
-  int new_attribute(int it, std::string attribute, int attribute_type)
-  { return particle_descr_->new_attribute (it,attribute,attribute_type); }
+  int new_attribute(int it, std::string attribute, int attribute_type, int arraysize)
+  { return particle_descr_->new_attribute (it,attribute,attribute_type,arraysize); }
 
   /// Return the number of attributes of the given type.
 
@@ -215,6 +215,9 @@ public: // interface
   /// Return the data type of the given attribute.
   int attribute_type (int it,int ia) const
   { return particle_descr_->attribute_type(it,ia); }
+
+  int attribute_arraysize (int it,int ia) const
+  { return particle_descr_->attribute_arraysize(it,ia); }
 
   /// Return the number of bytes allocated for the given attribute.
   int attribute_bytes (int it,int ia) const

@@ -32,6 +32,7 @@ ParticleDescr::ParticleDescr() throw()
     attribute_name_(),
     attribute_index_(),
     attribute_type_(),
+    attribute_arraysize_(),
     attribute_position_(),
     attribute_velocity_(),
     attribute_bytes_(),
@@ -58,6 +59,7 @@ void ParticleDescr::pup (PUP::er &p)
   p | attribute_name_;
   p | attribute_index_;
   p | attribute_type_;
+  p | attribute_arraysize_;
   p | attribute_position_;
   p | attribute_velocity_;
   p | attribute_bytes_;
@@ -93,6 +95,7 @@ int ParticleDescr::new_type(std::string type_name)
   attribute_name_. resize(nt + 1);
   attribute_index_.resize(nt + 1);
   attribute_type_.resize(nt + 1);
+  attribute_arraysize_.resize(nt + 1);
 
   attribute_position_.resize(nt + 1);
   attribute_position_[nt].resize(3);
@@ -164,9 +167,12 @@ std::string ParticleDescr::type_name (int it) const
 // Attributes
 //----------------------------------------------------------------------
 
-int ParticleDescr::new_attribute (int it, std::string name, int type)
+int ParticleDescr::new_attribute (int it, std::string name, int type, int arraysize=1)
 {
-  const int attribute_bytes = cello::type_bytes[type];
+  const int attribute_bytes = arraysize*cello::type_bytes[type];
+
+  CkPrintf("%s: it = %d\t name = %s\t type = %d\t arraysize = %d\t bytes = %d\n",
+	   __FUNCTION__, it, name.c_str(), type, arraysize,  attribute_bytes);
 
 #ifdef CELLO_CHECK
   
@@ -186,7 +192,8 @@ int ParticleDescr::new_attribute (int it, std::string name, int type)
 
   attribute_index_[it][name] = na;
   attribute_name_[it].push_back(name);
-  attribute_type_[it]. push_back(type);
+  attribute_type_[it].push_back(type);
+  attribute_arraysize_[it].push_back(arraysize);
   attribute_bytes_[it].push_back(attribute_bytes);
 
   // compute offset of next attribute
@@ -292,6 +299,19 @@ int ParticleDescr::attribute_type(int it,int ia) const
             (0 <= ia && ia < num_attributes(it))));
 
   return attribute_type_[it][ia];
+}
+
+//----------------------------------------------------------------------
+
+int ParticleDescr::attribute_arraysize(int it,int ia) const
+{
+  ASSERT2("ParticleDescr::attribute_arraysize",
+	  "Trying to access unknown particle attribute %d in type %d",
+	  ia,it,
+	  ( (0 <= it && it < num_types()) &&
+            (0 <= ia && ia < num_attributes(it))));
+
+  return attribute_arraysize_[it][ia];
 }
 
 //----------------------------------------------------------------------
