@@ -763,7 +763,7 @@ void EnzoConfig::read(Parameters * p) throw()
       p->list_value_integer (i,"Initial:collapse:array",1);
   }
   for (int i=initial_collapse_rank; i<3; i++) {
-    initial_collapse_array[i] = 1;
+    initial_collapse_array[i] = 4;
   }
   initial_collapse_radius_relative =
     p->value_float("Initial:collapse:radius_relative",0.1);

@@ -162,7 +162,7 @@ double EnzoMethodPpml::timestep (Block * block) const throw()
 
   dt = MIN(dt, dtBaryons);
 
-
+  CkPrintf("PPML timestep = %g\n",dt);
   return dt;
 }
 

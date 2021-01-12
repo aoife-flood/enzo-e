@@ -287,6 +287,6 @@ double EnzoMethodGravity::timestep_ (Block * block) const throw()
       }
     }
   }
-
+  CkPrintf("Gravity timestep = %g\n", 0.5*dt);
   return 0.5*dt;
 }

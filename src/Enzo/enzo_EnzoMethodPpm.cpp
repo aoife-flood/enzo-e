@@ -240,6 +240,6 @@ double EnzoMethodPpm::timestep ( Block * block ) const throw()
   dtBaryons *= courant_;
 
   double dt = dtBaryons;
-
+  CkPrintf("PPM timestep = %g \n",dt);
   return dt;
 }

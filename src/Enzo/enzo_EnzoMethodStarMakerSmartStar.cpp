@@ -74,6 +74,7 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   double lx, ly, lz;
   block->lower(&lx,&ly,&lz);
   accretion_radius_cells_ = enzo_config->method_star_maker_accretion_radius_cells;
+  CkPrintf("Accretion radius cells: %d \n",accretion_radius_cells_);
   // declare particle position arrays
   //  default particle type is "star", but this will default
   //  to subclass particle_type
@@ -221,13 +222,13 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
 	//CkExit(-99);
 	// (iv) 
 	
-#ifdef DONOTCOMPILE
+//#ifdef DONOTCOMPILE
 	    
-        if (! this->check_number_density_threshold(ndens)) continue;
-        if (! this->check_self_gravitating( mean_particle_mass, rho_cgs, temperature[i],
-                                            velocity_x, velocity_y, velocity_z,
-                                            enzo_units->length(), enzo_units->density(),
-                                            i, 1, my, my*mz, dx, dy, dz)) continue;
+	  //if (! this->check_number_density_threshold(ndens)) continue;
+        //if (! this->check_self_gravitating( mean_particle_mass, rho_cgs, temperature[i],
+        //                                    velocity_x, velocity_y, velocity_z,
+        //                                    enzo_units->length(), enzo_units->density(),
+        //                                    i, 1, my, my*mz, dx, dy, dz)) continue;
 
         // AJE: TO DO ---
         //      If Grackle is used, check for this and use the H2
@@ -245,7 +246,7 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
 
        
         // Check whether mass in [min_mass, max_range] range and if specified, Jeans unstable
-        if (! this->check_mass(mass)) continue;
+        //if (! this->check_mass(mass)) continue;
 
         double tdyn = sqrt(3.0 * cello::pi / 32.0 / cello::grav_constant /
                       (density[i] * enzo_units->density()));
@@ -259,11 +260,17 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
                                          this->efficiency_ ;
         // if this is less than the mass of a single particle,
         // use a random number draw to generate the particle
+	CkPrintf("star_fraction = %g \n",star_fraction);
+	CkPrintf("star_particle_min_mass_ = %g \n",this->star_particle_min_mass_);
+	CkPrintf("star_particle_max_mass_ = %g \n",this->star_particle_max_mass_);
+	CkPrintf("star_fraction*mass = %g \n",star_fraction*mass);
         if ( star_fraction * mass < this->star_particle_min_mass_){
           // get a random number
           double rnum = (double(rand())) / (double(RAND_MAX));
           double probability = this->efficiency_ * mass / this->star_particle_min_mass_;
+	  CkPrintf("rnum = %g, probability = %g \n",rnum,probability);
           if (rnum > probability){
+	      CkPrintf("Not forming stars");
               continue; // do not form stars
           } else{
             star_fraction = this->star_particle_min_mass_ / mass;
@@ -288,7 +295,7 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
 
           star_fraction = std::min(star_fraction, this->maximum_star_fraction_);
         }
-#endif
+//#endif
         count++; //
 
         // now create a star particle
@@ -305,8 +312,7 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
         // pointer to mass array in block
         pmass = (enzo_float *) particle.attribute_array(it, ia_m, ib);
 
-        pmass[io] = density[i] * dx * dy * dz;
-	CkPrintf("pmass[%d] = %g\n",io,pmass[io]);
+        pmass[io] = density[i] * dx * dy * dz * star_fraction;
         px = (enzo_float *) particle.attribute_array(it, ia_x, ib);
         py = (enzo_float *) particle.attribute_array(it, ia_y, ib);
         pz = (enzo_float *) particle.attribute_array(it, ia_z, ib);
@@ -362,11 +368,11 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
           pmetal[io] = metal[i] / density[i];
         }
 
-	
-	
-	
+	enzo_float old_density = density[i];
+	CkPrintf("Smartstar: density index mass: %g %i %g\n",
+                   density[i],i,mass);
+	density[i] = density[i]*(1.0-star_fraction);
         // Remove mass from grid and rescale fraction fields
-        const double scale = 1.0;
 
         if (density[i] < 0){
           CkPrintf("Smartstar: density index mass: %g %i %g\n",
@@ -377,17 +383,23 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
 
         // rescale tracer fields to maintain constant mass fraction
         // with the corresponding new density...
-        //    scale = new_density / old_density
+        enzo_float scale = density[i] / old_density;
         rescale_densities(enzo_block, i, scale);
-
-
-
+	enzo_float cell_mass_before = old_density*dx*dy*dz;
+	enzo_float cell_mass_after = density[i]*dx*dy*dz;
+	enzo_float cell_mass_change = cell_mass_before - cell_mass_after;
+	//CkPrintf("density[%d] = %g\n",i,density_after[i]);
+	//grid_mass_after = density_after[i]*dx*dy*dz;
+	//CkPrintf("grid_mass_after[%d] = %g\n",i,grid_mass_after);
+	//CkPrintf("Particle position = (%g,%g,%g)\n",px[io],py[io],pz[io]);
+	CkPrintf("Index = %d \n Cell Mass Change = %g \n Particle Mass = %g\n",i,cell_mass_change,pmass[io]);
       }
     }
   } // end loop iz
 
   if (count > 0){
       CkPrintf("SmartStar: Number of particles formed = %i \n", count);
+      //CkExit(-1);
   }
 
 

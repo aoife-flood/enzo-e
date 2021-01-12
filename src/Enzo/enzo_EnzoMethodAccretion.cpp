@@ -1,4 +1,4 @@
-/// See LICENSE_CELLO file for license and copyright information
+   /// See LICENSE_CELLO file for license and copyright information
 /// @file	enzo_EnzoMethodAccretion.cpp
 
 ///
@@ -234,6 +234,7 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
 	double weighted_sum = 0.0, avg_temp = 0.0, total_gas_mass = 0.0, sum_of_weights = 0.0;
 	/* Calculate cell weights within the accretion zone */
 	for (int iz = 0; iz < ngz; iz++){
+
 	  for (int iy = 0; iy < ngy; iy++){
 	    for (int ix = 0; ix < ngx; ix++){
 	      int cellindex = INDEX(ix,iy,iz,ngx,ngy);
@@ -360,12 +361,12 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
 	  CkPrintf("old_mass = %e Msolar\t cmass = %e Msolar\n", omass/cello::solar_mass,
 		   cmass/cello::solar_mass);
 	  CkPrintf("accrate = %e Msolar/yr\t accratetime = %e yrs \t " \
-		   "deltatime = %f yrs\t index = %d\t Particle Mass = %e Msolar\t Class = %d\n",
+     		   "deltatime = %f yrs\t index = %d\t Particle Mass = %e Msolar\t Class = %d\n",
 		   paccrate[ipdp][timeindex]*cello::yr_s/cello::solar_mass,
 		   paccratetime[ipdp][timeindex]/cello::yr_s,
 		   deltatime/cello::yr_s,
 		   ptimeindex[ipdp],
-		   pmass[ipdp],
+ 		   pmass[ipdp],
 		   pclass[ipdp]);
 	  if(paccrate[ipdp][timeindex]*cello::yr_s/cello::solar_mass > CRITICAL_ACCRETION_RATE) {
 	    pclass[ipdp] = SMS;
@@ -564,7 +565,8 @@ int EnzoMethodAccretion::remove_accreted_mass (Block * block, enzo_float ppos[3]
 	  // Mass first
 	  // This is actually a density since particle masses are stored
 	  // in density units.
-	  *accreted_mass += maccreted/cellvolume;
+	  //*accreted_mass += maccreted/cellvolume;
+	  *accreted_mass += maccreted;
 	  cumulative_accreted_mass += maccreted;
 	 
 	  AveragedVelocity[0] += mcell*vgas[0];
