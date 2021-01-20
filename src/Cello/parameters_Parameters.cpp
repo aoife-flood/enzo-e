@@ -113,7 +113,6 @@ void Parameters::pup (PUP::er &p)
 void Parameters::read ( const char * file_name )
 /// @param    file_name An opened input parameter file or stdin
 {
-
   FILE * file_pointer = fopen(file_name,"r");
 
   ASSERT1("Parameters::read",
@@ -139,7 +138,6 @@ void Parameters::read ( const char * file_name )
     }
 
     full_parameter = full_parameter + node->parameter;
-
     new_param_(full_parameter,param);
 
     node = node->next;

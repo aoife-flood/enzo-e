@@ -8,7 +8,7 @@
 
 #include "cello.hpp"
 #include "enzo.hpp"
-#define UPDATE_STATS 1
+//#define UPDATE_STATS 1
 EnzoMethodAccretion::EnzoMethodAccretion
 ()
   : Method()
@@ -100,12 +100,6 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
   enzo_float cosmo_a = 1.0;
   enzo_float accretion_rate = 0.0, accreted_mass = 0.0;
   
-  CkPrintf("ghost depth = %d %d %d\n", gx, gy, gz);
-  CkPrintf("grid dimensions = %d %d %d\n", mx, my, mz);
-  CkPrintf("field size = %d %d %d\n", nx, ny, nz);
-  CkPrintf("field size + ghost = %d %d %d\n", ngx, ngy, ngz);
-  
-
   double current_time  = block->time();
   if (cosmology) {
     enzo_float cosmo_dadt = 0.0;
@@ -134,7 +128,7 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
 
     
     const int ia_m = particle.attribute_index (it, "mass");
-    const int ia_pm = particle.attribute_index (it, "prevmass");
+    //    const int ia_pm = particle.attribute_index (it, "prevmass");
     const int ia_x = (rank >= 1) ? particle.attribute_index (it, "x") : -1;
     const int ia_y = (rank >= 2) ? particle.attribute_index (it, "y") : -1;
     const int ia_z = (rank >= 3) ? particle.attribute_index (it, "z") : -1;
@@ -161,9 +155,9 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
       enzo_float *px=0, *py=0, *pz=0;
       enzo_float *pvx=0, *pvy=0, *pvz=0;
       enzo_float *plifetime=0, *pcreation=0, *pmass=0, *paccrate=0, *paccrate_time=0;
-      enzo_float *prevmass=0;
+      //enzo_float *prevmass=0;
       int *ptimeindex=0, *pclass=0;
-      prevmass = (enzo_float *) particle.attribute_array(it, ia_pm, ib);
+      //prevmass = (enzo_float *) particle.attribute_array(it, ia_pm, ib);
       pmass = (enzo_float *) particle.attribute_array(it, ia_m, ib);
       ptimeindex = (int *)  particle.attribute_array(it, ia_timeindex, ib);
       pclass = (int *)  particle.attribute_array(it, ia_class, ib);
@@ -360,7 +354,7 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
 	
 	if(block->cycle() % 10 ==  0) {
 	  CkPrintf("OK so we need to calculate the accretion rate here\n");
-	  enzo_float omass = prevmass[ipdp];
+	  //enzo_float omass = prevmass[ipdp];
 	  enzo_float cmass = pmass[ipdp];
 	  if(cmass - omass < 0.0) {
 	    CkPrintf("Weird - the previous mass is greater than the current mass....\n");
@@ -394,7 +388,7 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
 	  }
 	 
 
-	  prevmass[ipdp] = cmass;
+	  //prevmass[ipdp] = cmass;
 
 	  CkPrintf("old_mass = %e Msolar\t cmass = %e Msolar\t DeltaM = %f\n",
 		   omass/cello::mass_solar,
@@ -535,14 +529,14 @@ int EnzoMethodAccretion::remove_accreted_mass (Block * block, enzo_float ppos[3]
 	else {  //Inside accretion radius
 	  
 	  // TE and GE are stored per unit mass - is this true in enzo-e - I think so (JR)....
-	  double etot = te[cellindex]*mcell;
-	  double eint = 0.0;
-	  if (dual_energy_)  /*Look into this and see where it gets set */
-	    eint = ge[cellindex]*mcell;
-	  else
-	    eint = etot - 0.5*mcell*
-	      (vgas[0]*vgas[0] + vgas[1]*vgas[1] + vgas[2]*vgas[2]);
-	  double ke = 0.5*mcell*(vgas[0]*vgas[0] + vgas[1]*vgas[1] + vgas[2]*vgas[2]);
+	  // double etot = te[cellindex]*mcell;
+	  // double eint = 0.0;
+	  // if (dual_energy_)  /*Look into this and see where it gets set */
+	  //   eint = ge[cellindex]*mcell;
+	  // else
+	  //   eint = etot - 0.5*mcell*
+	  //     (vgas[0]*vgas[0] + vgas[1]*vgas[1] + vgas[2]*vgas[2]);
+	  // double ke = 0.5*mcell*(vgas[0]*vgas[0] + vgas[1]*vgas[1] + vgas[2]*vgas[2]);
 	
 	  // Calculate mass we need to subtract from this cell
 	  double maccreted =  dt * accretion_rate * weight;
@@ -566,19 +560,19 @@ int EnzoMethodAccretion::remove_accreted_mass (Block * block, enzo_float ppos[3]
 	  // Compute new total internal energy. By construction,
 	  // this keeps the specific internal energy constant after
 	  // accretion
-	  double eintnew = eint * (1.0 - maccreted/mcell);
+	  //double eintnew = eint * (1.0 - maccreted/mcell);
 	  //
 	  // Compute new total kinetic energy
-	  double kenew = ke * (1.0 - maccreted/mcell);
+	  //double kenew = ke * (1.0 - maccreted/mcell);
 	  
 	  // Compute the new total energy
-	  double etotnew = eintnew + kenew;
+	  //double etotnew = eintnew + kenew;
 	  
 	  // Update the densities
 	  density[cellindex] -= maccreted/cellvolume;
 	  
 	  // Update the energies. ge is unchanged in this framework. 
-	  te[cellindex] = etotnew/mnew;
+	  //te[cellindex] = etotnew/mnew;
 	  
 	  // Check if mass or energy is too small, correct if necessary
 	  if (density[cellindex] < SmallRho) {
@@ -587,28 +581,26 @@ int EnzoMethodAccretion::remove_accreted_mass (Block * block, enzo_float ppos[3]
 	    velocity_y[cellindex] = vgas[1];
 	    velocity_z[cellindex] = vgas[2];
 	  }
-	  if (dual_energy_) {
-	    if (ge[cellindex] < SmallEint) {
-	      ge[cellindex] = SmallEint;
-	    }
-	  }
-	  else {
-	    if (te[cellindex] -
-		0.5 * (pow(velocity_x[cellindex],2) +
-		       pow(velocity_y[cellindex],2) +
-		       pow(velocity_z[cellindex],2))
-		< SmallEint) {
-	      te[cellindex] = SmallEint +
-		0.5 * (pow(velocity_x[cellindex],2) +
-		       pow(velocity_y[cellindex],2) +
-			   pow(velocity_z[cellindex],2));
-	    }
-	  }
+	  // if (dual_energy_) {
+	  //   if (ge[cellindex] < SmallEint) {
+	  //     ge[cellindex] = SmallEint;
+	  //   }
+	  // }
+	  // else {
+	  //   if (te[cellindex] -
+	  // 	0.5 * (pow(velocity_x[cellindex],2) +
+	  // 	       pow(velocity_y[cellindex],2) +
+	  // 	       pow(velocity_z[cellindex],2))
+	  // 	< SmallEint) {
+	  //     te[cellindex] = SmallEint +
+	  // 	0.5 * (pow(velocity_x[cellindex],2) +
+	  // 	       pow(velocity_y[cellindex],2) +
+	  // 		   pow(velocity_z[cellindex],2));
+	  //   }
+	  // }
 	  // Everything is OK we can update the particle
 	  // Mass first
-	  // This is actually a density since particle masses are stored
-	  // in density units.
-	  //*accreted_mass += maccreted/cellvolume;
+	  
 	  *accreted_mass += maccreted;
 	  cumulative_accreted_mass += maccreted;
 	 
@@ -682,10 +674,10 @@ double EnzoMethodAccretion::calculate_bondi_hoyle_radius(enzo_float pmass,
 			      pow(pvel[1] - cell_vel[1],2) +
 			      pow(pvel[2] - cell_vel[2],2));
   const double mean_particle_mass = cello::mass_hydrogen*enzo_config->ppm_mol_weight;
-  const double cInfinity = sqrt(gamma_ * cello::kboltz * cell_temp / mean_particle_mass);
-  BHradius = cello::grav_constant*pmass/(pow(vInfinity,2) + pow(cInfinity,2));
+  const double cInfinity_squared = cello::kboltz * cell_temp / mean_particle_mass;
+  BHradius = cello::grav_constant*pmass/(pow(vInfinity,2) + cInfinity_squared);
   CkPrintf("%s: vInfinity = %f km/s\n", __FUNCTION__,  (vInfinity)/1e5);
-  CkPrintf("%s: cInfinity = %f km/s\n", __FUNCTION__,  (cInfinity)/1e5);
+  CkPrintf("%s: cInfinity = %f km/s\n", __FUNCTION__,  sqrt(cInfinity_squared)/1e5);
   CkPrintf("%s: CellTemperature = %f K\n", __FUNCTION__, cell_temp);
   CkPrintf("%s: ParticleMass = %e Msolar\n", __FUNCTION__, pmass/cello::mass_solar);
   return BHradius;

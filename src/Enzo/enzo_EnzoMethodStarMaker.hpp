@@ -93,7 +93,8 @@ protected: // methods
     const double rho_cgs, const double mass);
   int check_jeans_density(const double temperature,
 			  const double dx_cgs,
-			  const double rho_cgs);
+			  const double rho,
+			  double * jeans_density);
   int check_gravitational_minimum(EnzoBlock * enzo_block,
 				  const double * cellpos,
 				  const double cellpotmin,

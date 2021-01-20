@@ -79,24 +79,42 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   //  default particle type is "star", but this will default
   //  to subclass particle_type
   const int it   = particle.type_index (this->particle_type());
-
+  CkPrintf("Particle type index = %d \n",it);
   const int ia_m = particle.attribute_index (it, "mass");
+  CkPrintf("ia_m = %d \n",ia_m);
   const int ia_pm = particle.attribute_index (it, "prevmass");
+  CkPrintf("ia_pm = %d \n",ia_pm);
   const int ia_x = particle.attribute_index (it, "x");
+  CkPrintf("ia_x = %d \n",ia_x);
   const int ia_y = particle.attribute_index (it, "y");
+  CkPrintf("ia_y = %d \n",ia_y);
   const int ia_z = particle.attribute_index (it, "z");
+  CkPrintf("ia_z = %d \n",ia_z);
   const int ia_vx = particle.attribute_index (it, "vx");
+  CkPrintf("ia_vx = %d \n",ia_vx);
   const int ia_vy = particle.attribute_index (it, "vy");
+  CkPrintf("ia_vy = %d \n",ia_vy);
   const int ia_vz = particle.attribute_index (it, "vz");
-
+  CkPrintf("ia_vz = %d \n",ia_vz);
+  const int ia_ax = particle.attribute_index(it,"ax");
+  CkPrintf("ia_ax = %d \n",ia_ax);
   // additional particle attributes
   const int ia_metal = particle.attribute_index (it, "metal_fraction");
+  CkPrintf("ia_metal = %d \n",ia_metal);
   const int ia_to    = particle.attribute_index (it, "creation_time");
+  CkPrintf("ia_to = %d \n",ia_to);
   const int ia_l     = particle.attribute_index (it, "lifetime");
+  CkPrintf("ia_l = %d \n",ia_l);
   const int ia_timeindex = particle.attribute_index (it, "timeindex");
+  CkPrintf("ia_timeindex = %d \n",ia_timeindex);
   const int ia_class = particle.attribute_index (it, "class");
+  CkPrintf("ia_class = %d \n",ia_class);
   const int ia_accrate = particle.attribute_index (it, "accretion_rate");
+  CkPrintf("ia_accrate = %d \n",ia_accrate);
   const int ia_accrate_time = particle.attribute_index (it, "accretion_rate_time");
+  CkPrintf("ia_accrate_time = %d \n",ia_accrate_time);
+  const int ia_foo = particle.attribute_index (it, "foo");
+  CkPrintf("ia_foo = %d \n",ia_foo);
   int ib  = 0; // batch counter
   int ipp = 0; // counter
   
@@ -154,7 +172,6 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   // check if this group exists, and if it does, loop over all of these
   // fields to assign particle chemical tags and deposit yields
 
-#ifdef DONOTCOMPILE
   // compute the temperature (we need it here)
   // NB: @JR This doesn't give the correct temperature. I need to come
   // and look at this. 
@@ -165,8 +182,6 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
      enzo_config->physics_cosmology);
 
   compute_temperature.compute(enzo_block);
-#endif
-
   // iterate over all cells (not including ghost zones)
   //
   //   To Do: Allow for multi-zone star formation by adding mass in
@@ -179,15 +194,12 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
         int i = ix + mx*(iy + my*iz);
 
         // need to compute this better for Grackle fields (on to-do list)
-        double rho_cgs = density[i] * enzo_units->density();
         double mean_particle_mass = enzo_config->ppm_mol_weight * cello::mass_hydrogen;
-        double ndens = rho_cgs / mean_particle_mass;
-	
-
-
-        double mass  = density[i] *dx*dy*dz * enzo_units->mass() / cello::mass_solar;
+	//        double ndens = rho_cgs / mean_particle_mass;
+	double rho_cgs = density[i] * enzo_units->density();
+        double mass_in_solar_masses  = density[i] *dx*dy*dz * enzo_units->mass() / cello::mass_solar;
         double metallicity = (metal) ? metal[i]/density[i]/Zsolar : 0.0;
-	
+	double jeans_density;
         //
         // Apply the criteria for star formation
         //
@@ -196,7 +208,7 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
 	//    exceed the jeans density
 	if(! this->check_jeans_density(temperature[i],
 				       dx*enzo_units->length(),
-				       rho_cgs)) continue;
+				       density[i],&jeans_density)) continue;
 	CkPrintf("First criteria passed!\n");
 	
 	//CkExit(-99);
@@ -219,7 +231,7 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
 	//CkExit(-99);
 	// (iv) 
 	
-//#ifdef DONOTCOMPILE
+#ifdef DONOTCOMPILE
 	    
 	  //if (! this->check_number_density_threshold(ndens)) continue;
         //if (! this->check_self_gravitating( mean_particle_mass, rho_cgs, temperature[i],
@@ -292,7 +304,7 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
 
           star_fraction = std::min(star_fraction, this->maximum_star_fraction_);
         }
-//#endif
+#endif
         count++; //
 
         // now create a star particle
@@ -306,17 +318,27 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
 	CkPrintf("ib = %d, ipp = %d\n",ib,ipp);
 
         int io = ipp; // ipp*ps
+	
         // pointer to mass array in block
         pmass = (enzo_float *) particle.attribute_array(it, ia_m, ib);
-
+	CkPrintf("ia_m = %d \n",ia_m);
 	prevmass = (enzo_float *) particle.attribute_array(it, ia_pm, ib);
-        pmass[io] = density[i] * dx * dy * dz;
-	prevmass[io] = pmass[io];
-
+	CkPrintf("ia_pm = %d \n",ia_pm);
+	CkPrintf("prevmass address = %p \n",prevmass);
+	CkPrintf("prevmass[%d] = %g \n",io,prevmass[io]);
+        pmass[io] = (density[i] - jeans_density) * dx * dy * dz;
+	CkPrintf("io = %d \n",io);
+	CkPrintf("jeans_density = %g \n",jeans_density);
+	CkPrintf("Particle mass = %g \n",pmass[io]);
+	//CkPrintf("prevmass address = %s \n",prevmass);
+	//prevmass[io] = (density[i] - jeans_density) * dx * dy * dz;
+	//CkPrintf("prevmass[io] = %g \n",prevmass[io]);
         px = (enzo_float *) particle.attribute_array(it, ia_x, ib);
         py = (enzo_float *) particle.attribute_array(it, ia_y, ib);
         pz = (enzo_float *) particle.attribute_array(it, ia_z, ib);
-
+	//CkPrintf("px address = %s \n",px);
+	//CkPrintf("py address = %s \n",py);
+	//CkPrintf("pz address = %s \n",pz);
         // need to double check that these are correctly handling ghost zones
         //   I believe lx is lower coordinates of active region, but
         //   ix is integer index of whole grid (active + ghost)
@@ -337,12 +359,15 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
         // finalize attributes
         plifetime = (enzo_float *) particle.attribute_array(it, ia_l, ib);
         pform     = (enzo_float *) particle.attribute_array(it, ia_to, ib);
-
+	CkPrintf("ia_l = %d \n",ia_l);
+	CkPrintf("pform = %d \n",ia_to);
         pform[io]     =  enzo_block->time();   // formation time
         plifetime[io] =  10.0 * cello::Myr_s / enzo_units->time() ; // lifetime
 
 	paccrate = (enzo_float *) particle.attribute_array(it, ia_accrate, ib);
         paccrate_time = (enzo_float *) particle.attribute_array(it, ia_accrate_time, ib);
+	CkPrintf("ia_accrate = %d \n",ia_accrate);
+	CkPrintf("ia_accrate_time = %d \n",ia_accrate_time);
 	ptimeindex = (int *) particle.attribute_array(it, ia_timeindex, ib);
 	ptimeindex[io] = 0;
 	pclass = (int *) particle.attribute_array(it, ia_class, ib);
@@ -374,18 +399,18 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
         }
 
         // Remove mass from grid and rescale fraction fields
-	density[i] = density[i]*(1.0-star_fraction);
+	density[i] = jeans_density;
         if (density[i] < 0){
           CkPrintf("Smartstar: density index mass: %g %i %g\n",
-                   density[i],i,mass);
+                   density[i],i,mass_in_solar_masses);
           ERROR("EnzoMethodStarMakerSmartStar::compute()",
                 "Negative densities in star formation");
         }
 
           // rescale tracer fields to maintain constant mass fraction
         // with the corresponding new density...
-        enzo_float scale = density[i] / old_density;
-        rescale_densities(enzo_block, i, 1.0 - star_fraction);
+        //enzo_float scale = density[i] / old_density;
+        rescale_densities(enzo_block, i, 1.0 - jeans_density/density[i]);
       }
     }
   } // end loop iz

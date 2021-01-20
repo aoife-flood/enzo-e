@@ -113,7 +113,8 @@ void EnzoInitialCollapse::enforce_block
   CkPrintf("%s: in = %d\n", __FUNCTION__, in);
   const double gamma = EnzoBlock::Gamma[in];
   CkPrintf("%s: gamma = %g \n", __FUNCTION__,gamma);
-  const double energy = 1e-3*(cello::kboltz)*temperature_ / ((gamma - 1.0) * (1.0 * cello::mass_hydrogen));
+  double mu = 3.0; // To match Federrath 2010
+  const double energy = cello::kboltz*temperature_ / ((gamma - 1.0) * (mu * cello::mass_hydrogen));
   CkPrintf("%s: energy = %g\n", __FUNCTION__, energy);
   CkPrintf("%s: temperature_ = %g\n", __FUNCTION__, temperature_);
   
@@ -146,8 +147,8 @@ void EnzoInitialCollapse::enforce_block
   else { //This is the mean density
     density = mass_ / (4.0/3.0*(cello::pi)*rx*ry*rz);
   }
-  double mu = 3.0;
-  double soundspeed = sqrt(temperature_*gamma*(cello::kboltz)/((mu)*(cello::mass_hydrogen)));
+  
+  double soundspeed = sqrt(temperature_*(cello::kboltz)/((mu)*(cello::mass_hydrogen))); 
   CkPrintf("%s: Profile = %d\n", __FUNCTION__, density_profile_);
   CkPrintf("%s: Density = %e\n", __FUNCTION__, density);
   CkPrintf("%s: mass = %e\n", __FUNCTION__, mass_);
@@ -187,7 +188,7 @@ void EnzoInitialCollapse::enforce_block
   std::fill_n(d,m,density / density_ratio);
   std::fill_n(te,m,energy);
   std::fill_n(ie,m,energy);
-  std::fill_n(t,m,5000.0);
+  std::fill_n(t,m,temperature_);
   std::fill_n(dt,m,0.0);
   std::fill_n(p,m,0.0);
   std::fill_n(po,m,0.0);

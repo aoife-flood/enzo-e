@@ -15,6 +15,7 @@
 #include "cello.hpp"
 #include "enzo.hpp"
 
+// #define SHU_COLLAPSE
 // #define DEBUG_SF
 
 //-------------------------------------------------------------------
@@ -273,39 +274,44 @@ double EnzoMethodStarMaker::h2_self_shielding_factor(
  */
 int EnzoMethodStarMaker::check_jeans_density(const double temperature,
 					     const double dx_cgs,
-					     const double rho_cgs)
+					     const double rho,
+					     double * jeans_density)
 {
 
-  /* 
-   * I dont think that a Jeans length resolution criteria exists in Enzo-E yet
-   * so just hardcoding as a workaround for now
-   */
-  if (!use_density_threshold_)
-    return 1;
-
+  //if (!this->use_jeans_density_)
+  //return 1;
+  
   const EnzoConfig * enzo_config = enzo::config();
-  const int JeansLengthSafetyCriteria = 1;
-  const double JeansDensityConstant = (gamma_*cello::pi*cello::kboltz) /
-    (enzo_config->ppm_mol_weight*cello::mass_hydrogen*cello::grav_constant);
-  const double jeans_density = 1e+100; //JeansDensityConstant * 1.01 * temperature /
-  //pow(dx_cgs*JeansLengthSafetyCriteria, 2.0);
+  EnzoUnits * enzo_units = enzo::units();
+  //const double JeansDensityConstant = (gamma_*cello::pi*cello::kboltz) /
+  //(enzo_config->ppm_mol_weight*cello::mass_hydrogen*cello::grav_constant);
+  const double J = 0.25; //might later set this to be a free parameter
   
-  const double density_threshold = std::min(jeans_density,
-	       this->number_density_threshold_*cello::mass_hydrogen*enzo_config->ppm_mol_weight);
-
-  if(rho_cgs >= density_threshold) {
-    CkPrintf("temperature = %e\t dx_cgs = %e\n", temperature, dx_cgs);
-    CkPrintf("jeans_density = %e\t ndens = %e\n",
-	     jeans_density,  this->number_density_threshold_*cello::mass_hydrogen*enzo_config->ppm_mol_weight);
+  //  const double density_threshold = std::min(jeans_density,
+  //	       this->number_density_threshold_*cello::mass_hydrogen*enzo_config->ppm_mol_weight);
+  //  double temperature_new;
+  //#ifdef SHU_COLLAPSE
+  //temperature_new = 10.0; // for some reason, temperature is incorrect
+  //#else
+  //temperature_new = temperature;
+  //#endif
+  const double sound_speed_squared_cgs = cello::kboltz*temperature/(enzo_config->ppm_mol_weight*cello::mass_hydrogen);
+  *jeans_density = J * J * cello::pi*sound_speed_squared_cgs / (cello::grav_constant * dx_cgs * dx_cgs * enzo_units->density()); //code units
   
-    CkPrintf("density_threshold = %e (%e cc)\t rho_cgs (ndens) = %e (%e)\n",
-	     density_threshold,
-	     density_threshold/(cello::mass_hydrogen*enzo_config->ppm_mol_weight),
-	     rho_cgs,
-	     rho_cgs/(cello::mass_hydrogen*enzo_config->ppm_mol_weight));
-  }
+  return (rho > *jeans_density);
+  
 
-  return(rho_cgs >= density_threshold);
+  // if(rho_cgs >= density_threshold) {
+  //   CkPrintf("temperature = %e\t dx_cgs = %e\n", temperature, dx_cgs);
+  //   CkPrintf("jeans_density = %e\t ndens = %e\n",
+  // 	     jeans_density,  this->number_density_threshold_*cello::mass_hydrogen*enzo_config->ppm_mol_weight);
+  
+  //   CkPrintf("density_threshold = %e (%e cc)\t rho_cgs (ndens) = %e (%e)\n",
+  // 	     density_threshold,
+  // 	     density_threshold/(cello::mass_hydrogen*enzo_config->ppm_mol_weight),
+  // 	     rho_cgs,
+  // 	     rho_cgs/(cello::mass_hydrogen*enzo_config->ppm_mol_weight));
+  // }
 }
 
 

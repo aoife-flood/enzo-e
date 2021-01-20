@@ -3,7 +3,6 @@
     ###    Date: 2018-05-18
     ###  Author: James Bordner (jobordner@ucsd.edu)
 
-    
    Domain { 
       lower = [0.0, 0.0];
       upper = [1.0, 1.0];
