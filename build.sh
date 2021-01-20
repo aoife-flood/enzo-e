@@ -54,6 +54,7 @@ if [ "$#" -ge 1 ]; then
       rm -rf config.log diff.org log.org warnings.org errors.org log.build out.scons.*
       rm -rf config/*.pyc
       rm -rf test/fail.* test/pass.* test/incomplete.*
+      rm -rf test/*.test-log
       rm -rf scons-local-2.2.0/SCons/*.pyc scons-local-2.2.0/SCons/*/*.pyc
       rm -rf charmrun parameters.out checkpoint_ppm* output-stride*.h5
       rm -rf cov-int.tgz cov-int
@@ -173,9 +174,9 @@ if [ $target == "test" ]; then
 
    # count failures, incompletes, and passes
 
-   grep "^ FAIL"       $dir/*unit > $dir/fail.$configure
-   grep "^ incomplete" $dir/*unit > $dir/incomplete.$configure
-   grep "^ pass"       $dir/*unit > $dir/pass.$configure
+   grep "^ FAIL"       $dir/*/*unit > $dir/fail.$configure
+   grep "^ incomplete" $dir/*/*unit > $dir/incomplete.$configure
+   grep "^ pass"       $dir/*/*unit > $dir/pass.$configure
 
    f=`wc -l < $dir/fail.$configure`
    i=`wc -l < $dir/incomplete.$configure`
@@ -239,11 +240,11 @@ if [ $target == "test" ]; then
     file_attempted=test/runs_attempted.$configure
     file_started=test/runs_started.$configure
     file_completed=test/runs_completed.$configure
-    echo "JR: attempting ls"
-    ls test/test_*.unit                   > $file_attempted
-    grep -l "BEGIN" test/test_*.unit      > $file_started
-    grep -l "END CELLO"  test/test_*.unit > $file_completed
 
+
+    ls test/*/test_*.unit                   > $file_attempted
+    grep -l "BEGIN" test/*/test_*.unit      > $file_started
+    grep -l "END CELLO"  test/*/test_*.unit > $file_completed
 
     count_attempted=`cat $file_attempted | wc -l `
     count_started=`cat $file_started | wc -l`
@@ -277,5 +278,17 @@ if [ $target == "test" ]; then
 	exit_status=0
     fi
 fi
+
+if [ $target = "test" ] && [ "$CELLO_PREC" = "double" ]; then
+    # the vl+ct tests should be consolidated with the rest of the tests
+    echo ""
+    echo "--------------------"
+    echo "Attempting to run VL+CT tests (only defined for double Precision)"
+    ./test/run_vlct_test.sh
+    result_code=$?
+    if [ $result_code -gt 0 ]; then
+        exit_status=1
+    fi
+fi;
 echo "Done."
 exit $exit_status
