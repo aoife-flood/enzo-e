@@ -583,8 +583,8 @@ void Simulation::initialize_data_descr_() throw()
 
   // ... first map attribute scalar type name to type_enum int
   std::map<std::string,int> type_val;
+  
   for (int i=0; i<NUM_TYPES; i++) {
-    CkPrintf("%d: name = %s\n", i, cello::type_name[i]);
     type_val[cello::type_name[i]] = i;
   }
 #ifdef CONFIG_PRECISION_SINGLE	
@@ -592,7 +592,8 @@ void Simulation::initialize_data_descr_() throw()
 #endif  
 #ifdef CONFIG_PRECISION_DOUBLE
   type_val["default"] = type_double;
-#endif  
+#endif
+
   for (size_t it=0; it<config_->particle_list.size(); it++) {
 
     particle_descr_->new_type (config_->particle_list[it]);
@@ -601,6 +602,7 @@ void Simulation::initialize_data_descr_() throw()
     int nc = config_->particle_constant_name[it].size();
     for (int ic=0; ic<nc; ic++) {
       std::string name = config_->particle_constant_name[it][ic];
+      CkPrintf("Constant name = %s \n",name);
       int         type = type_val[config_->particle_constant_type[it][ic]];
      
       ASSERT3 ("Simulation::initialize_data_descr_()",
@@ -652,7 +654,6 @@ void Simulation::initialize_data_descr_() throw()
     for (int ia=0; ia<na; ia++) {
       std::string name = config_->particle_attribute_name[it][ia];
       int type         = type_val[config_->particle_attribute_type[it][ia]];
-      CkPrintf("JR: %s: type = %s\n", __FUNCTION__, config_->particle_attribute_type[it][ia].c_str());
       ASSERT3 ("Simulation::initialize_data_descr_()",
 	       "Unknown Particle type \"%s\" attribute \"%s\" has unknown type \"%s\"",
 	       config_->particle_list[it].c_str(),
@@ -679,12 +680,16 @@ void Simulation::initialize_data_descr_() throw()
   // particle groups
 
   int num_particles = config_->particle_group_list.size();
+  CkPrintf("Size of particle group list = %d \n",config_->particle_group_list.size());
   for (int index_particle=0; index_particle<num_particles; index_particle++) {
+    CkPrintf("Particle index = %d \n",index_particle);
     std::string particle = config_->particle_list[index_particle];
+    CkPrintf("Particle Name = %s \n",particle.c_str());
     int num_groups = config_->particle_group_list[index_particle].size();
-   
+    CkPrintf("Number of Groups = %d \n",num_groups);
     for (int index_group=0; index_group<num_groups; index_group++) {
       std::string group = config_->particle_group_list[index_particle][index_group];
+      CkPrintf("Group index = %d , Particle Index = %d , Group Name = %s \n",index_group,index_particle,group.c_str());
       particle_descr_->groups()->add(particle,group);
     }
   }

@@ -53,6 +53,8 @@ int Method::add_new_refresh_ (int neighbor_type)
   Refresh refresh_default
     (ghost_depth,min_face_rank, neighbor_type, sync_neighbor, 0);
 
+  refresh_default.print();
+
   return cello::simulation()->new_register_refresh(refresh_default);
 }
 

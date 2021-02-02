@@ -82,10 +82,11 @@ EnzoConfig::EnzoConfig() throw ()
   initial_grackle_test_minimum_temperature(10.0),
   initial_grackle_test_reset_energies(0),
 #endif /* CONFIG_USE_GRACKLE */
-<<<<<<< HEAD
+
+  // EnzoInitialFeedbackTest
   initial_feedback_test_density(),
   initial_feedback_test_star_mass(),
-=======
+
   // EnzoInitialInclinedWave
   initial_inclinedwave_alpha(0.0),
   initial_inclinedwave_beta(0.0),
@@ -94,7 +95,7 @@ EnzoConfig::EnzoConfig() throw ()
   initial_inclinedwave_parallel_vel(std::numeric_limits<double>::min()),
   initial_inclinedwave_positive_vel(true),
   initial_inclinedwave_wave_type(""),
->>>>>>> master
+
   // EnzoInitialMusic
   initial_music_field_files(),
   initial_music_field_datasets(),
@@ -450,7 +451,7 @@ void EnzoConfig::pup (PUP::er &p)
   p | initial_pm_mpp;
   p | initial_pm_level;
 
-<<<<<<< HEAD
+
   p | initial_burkertbodenheimer_rank;
   PUParray(p,initial_burkertbodenheimer_array,3);
   p | initial_burkertbodenheimer_radius_relative;
@@ -490,13 +491,13 @@ void EnzoConfig::pup (PUP::er &p)
   p | initial_IG_recent_SF_SFR;
   p | initial_IG_recent_SF_seed;
 
-=======
+
   p | initial_shock_tube_setup_name;
   p | initial_shock_tube_aligned_ax;
   p | initial_shock_tube_axis_velocity;
   p | initial_shock_tube_trans_velocity;
   p | initial_shock_tube_flip_initialize;
->>>>>>> master
+
 
   p | initial_soup_rank;
   p | initial_soup_file;
@@ -859,8 +860,8 @@ void EnzoConfig::read(Parameters * p) throw()
   initial_sedov_random_te_multiplier =
     p->value_integer  ("Initial:sedov_random:te_multiplier",1);
 
-<<<<<<< HEAD
-=======
+
+
   // Shock Tube Initialization
   initial_shock_tube_setup_name = p->value_string
     ("Initial:shock_tube:setup_name","");
@@ -924,7 +925,7 @@ void EnzoConfig::read(Parameters * p) throw()
     ERROR("EnzoConfig::read",
 	  "Initial:cloud:uniform_bfield must contain 0 or 3 entries.");
   }
->>>>>>> master
+
 
   // Cosmology initialization
   initial_cosmology_temperature = p->value_float("Initial:cosmology:temperature",0.0);
@@ -1177,7 +1178,7 @@ void EnzoConfig::read(Parameters * p) throw()
   method_gravity_accumulate = p->value_logical
     ("Method:gravity:accumulate",true);
 
-<<<<<<< HEAD
+
   method_background_acceleration_type = p->value_string
    ("Method:background_acceleration:type","unknown");
 
@@ -1227,7 +1228,7 @@ void EnzoConfig::read(Parameters * p) throw()
   for (size_t i=0; i<method_list.size(); i++) {
     if (method_list[i] == "background_acceleration") physics_gravity=true;
   }
-=======
+
   method_vlct_riemann_solver = p->value_string
     ("Method:mhd_vlct:riemann_solver","hlld");
   method_vlct_half_dt_reconstruct_method = p->value_string
@@ -1244,7 +1245,7 @@ void EnzoConfig::read(Parameters * p) throw()
     ("Method:mhd_vlct:dual_energy", false);
   method_vlct_dual_energy_eta = p->value_float
     ("Method:mhd_vlct:dual_energy_eta", 0.001);
->>>>>>> master
+
 
   //--------------------------------------------------
   // Physics

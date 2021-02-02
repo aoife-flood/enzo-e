@@ -1005,7 +1005,7 @@ void Config::read_particle_ (Parameters * p) throw()
   particle_batch_size = p->value_integer("Particle:batch_size",1024);
 
   num_particles = p->list_length("Particle:list"); 
-
+  CkPrintf("%s: Number of particle types = %d \n",__FUNCTION__,num_particles);
   particle_list.resize(num_particles);
   particle_interleaved.resize(num_particles);
   particle_constant_name.resize(num_particles);
@@ -1030,12 +1030,13 @@ void Config::read_particle_ (Parameters * p) throw()
   for (int it=0; it<num_particles; it++) {
 
     std::string name_type = p->list_value_string(it, "Particle:list");
-
+    CkPrintf("%s: it = %d \n",__FUNCTION__,it);
+    CkPrintf("%s: name_type = %s \n",__FUNCTION__,name_type.c_str());
     particle_list [it]   = name_type;
     particle_index[name_type] = it;
 
     std::string type_str = "Particle:" + name_type;
-
+    CkPrintf("%s: type_str = %d \n",__FUNCTION__,type_str.c_str());
     // are attributes are interleaved?
 
     particle_interleaved[it] = 
@@ -1047,7 +1048,7 @@ void Config::read_particle_ (Parameters * p) throw()
     std::string const_str = type_str + ":constants";
     
     const int nc3 = p->list_length(const_str);
-
+    CkPrintf("%s: nc3 = %d \n",__FUNCTION__,nc3);
     ASSERT2 ("read_particle_",
 	     "Particle type %d constants list length %d "
 	     "must be divisible by three",
@@ -1163,19 +1164,25 @@ void Config::read_particle_ (Parameters * p) throw()
   for (int index_particle=0; index_particle<num_particles; index_particle++) {
 
     std::string particle = particle_list[index_particle];
+    CkPrintf("%s: particle_name = %s \n",__FUNCTION__,particle.c_str());
 
     std::string param =  std::string("Particle:") + particle + ":group_list";
-
+    CkPrintf("%s: group_param = %s \n",__FUNCTION__,param.c_str());
+    //CkPrintf("%s Type of param = %d \n",p->type(param));
+    //CkPrintf("%s parameter_list = %d \n",parameter_list);
+    //CkPrintf("%s parameter_string = %d \n",parameter_string);
     if (p->type(param) == parameter_list)  {
       // group_list is a list
       const int n = p->list_length(param);
       for (int i=0; i<n; i++) {
 	std::string group = p->list_value_string(i,param);
+	CkPrintf("%s Group = %s \n",group.c_str());
 	particle_group_list[index_particle].push_back(group);
       }
     } else if (p->type(param) == parameter_string) {
       // group_list is a string
       std::string group = p->value_string(param);
+      CkPrintf("%s Group = %s \n",group.c_str());
       particle_group_list[index_particle].push_back(group);
     }
   }

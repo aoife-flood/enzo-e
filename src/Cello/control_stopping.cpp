@@ -52,13 +52,9 @@ void Block::stopping_begin_()
   simulation->set_phase(phase_stopping);
 
   int stopping_interval = simulation->config()->stopping_interval;
-  CkPrintf("stopping_interval = %d\n", stopping_interval);
   bool stopping_reduce = stopping_interval ? 
     ((cycle_ % stopping_interval) == 0) : false;
-  CkPrintf("cycle_ = %d\n", cycle_);
-  CkPrintf("cycle_ // stopping_interval = %d\n", cycle_ % stopping_interval);
-  CkPrintf("stopping_reduce = %d\n", stopping_reduce);
-  CkPrintf("dt_ = %g\n",dt_);
+
   if (stopping_reduce || dt_==0.0) {
 
     // Compute local dt
@@ -69,11 +65,7 @@ void Block::stopping_begin_()
     Method * method;
     double dt_block = std::numeric_limits<double>::max();
     while ((method = problem->method(index++))) {
-      CkPrintf("index = %d \n",index);
-      CkPrintf("dt_block = %g\n",dt_block);
-      CkPrintf("method->timestep(this) = %g \n",method->timestep(this));
       dt_block = std::min(dt_block,method->timestep(this));
-      CkPrintf("dt_block = %g\n",dt_block);
     }
 
     // Reduce timestep to coincide with scheduled output if needed

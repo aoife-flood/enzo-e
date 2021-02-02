@@ -13,8 +13,8 @@
 #include "charm_simulation.hpp"
 #include "charm_mesh.hpp"
 
-// #define DEBUG_REFRESH
-// #define DEBUG_CONTROL
+#define DEBUG_REFRESH
+#define DEBUG_CONTROL
 
 #ifdef DEBUG_CONTROL
 # define TRACE_CONTROL(A)						\
@@ -240,6 +240,7 @@ void Block::control_sync_neighbor(int entry_point, int id_sync,
   ItNeighbor it_neighbor = this->it_neighbor(min_face_rank,index_,neighbor_type,min_level,root_level);
 
   int of3[3];  // ignored
+
   while (it_neighbor.next(of3)) {
 
     ++num_neighbors;
@@ -258,7 +259,8 @@ void Block::control_sync_neighbor(int entry_point, int id_sync,
     CkPrintf ("%s DEBUG_CONTROL calling p_control_sync_count count %d (%d %d 0)\n",
 	      name().c_str(),num_neighbors, entry_point,id_sync);
     fflush(stdout);
-#endif    
+#endif
+
   control_sync_count (entry_point,id_sync,num_neighbors + 1);
 
 }

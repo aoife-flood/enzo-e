@@ -147,14 +147,11 @@ SConscript('UnitsComponent/SConscript')
 
 #prevent concurrent running of Parallel tests
 
-<<<<<<< HEAD
 
-# Prevent concurrent running of parallel jobs
-=======
 SideEffect('log.txt',
      ['method_ppm-1.unit',
       'method_ppm-8.unit'])
->>>>>>> master
+
 
 
 env.Clean('.',Glob('test_*.in'))

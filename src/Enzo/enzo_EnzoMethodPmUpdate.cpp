@@ -28,11 +28,15 @@ EnzoMethodPmUpdate::EnzoMethodPmUpdate
 {
   TRACE_PM("EnzoMethodPmUpdate()");
   // Initialize default Refresh object
-
+  CkPrintf("ir_post_ = %d \n", ir_post_);
+  CkPrintf("name() = %s \n", name().c_str());
+  //CkExit(-1);
   cello::simulation()->new_refresh_set_name(ir_post_,name());
   
   const int rank = cello::rank();
   Refresh * refresh = cello::refresh(ir_post_);
+  refresh->print();
+  //CkExit(-1);
   if (rank >= 1) refresh->add_field("acceleration_x");
   if (rank >= 2) refresh->add_field("acceleration_y");
   if (rank >= 3) refresh->add_field("acceleration_z");
@@ -71,8 +75,8 @@ void EnzoMethodPmUpdate::compute ( Block * block) throw()
 
   Particle particle = block->data()->particle();
   
-  if (block->is_leaf() && particle.type_exists("dark")) {
-
+  if (block->is_leaf() && (particle.type_exists("dark") || particle.type_exists("star"))) {
+    
 #ifdef DEBUG_UPDATE    
     double a3sum[3]={0.0};
     double v3sum[3]={0.0};
@@ -191,11 +195,10 @@ void EnzoMethodPmUpdate::compute ( Block * block) throw()
         if (rank >= 1) {
 
 	  for (int ip=0; ip<np; ip++) {
-
 	    int ipdv = ip*dv;
 	    int ipdp = ip*dp;
 	    int ipda = ip*da;
-
+	    CkPrintf("Particle %d before updates, (x,y,z) = (%g,%g,%g), (vx,vy,vz) = (%g,%g,%g) (ax,ay,az) = (%g,%g,%g)\n" ,ip,x[ipdp],y[ipdp],z[ipdp],vx[ipdv],vy[ipdv],vz[ipdv],ax[ipda],ay[ipda],az[ipda]); 
 #ifdef DEBUG_UPDATE    
 	    v3sum[0]+=std::abs(vx[ipdv]);
 	    a3sum[0]+=std::abs(ax[ipda]);
@@ -206,6 +209,8 @@ void EnzoMethodPmUpdate::compute ( Block * block) throw()
 	    vx[ipdv] = cvv*vx[ipdv] + cva*ax[ipda];
 	    x [ipdp] += cp*vx[ipdv];
 	    vx[ipdv] = cvv*vx[ipdv] + cva*ax[ipda];
+
+	     CkPrintf("Particle %d after x update, (x,y,z) = (%g,%g,%g), (vx,vy,vz) = (%g,%g,%g) (ax,ay,az) = (%g,%g,%g)\n" ,ip,x[ipdp],y[ipdp],z[ipdp],vx[ipdv],vy[ipdv],vz[ipdv],ax[ipda],ay[ipda],az[ipda]); 
 
 	  }
         }
@@ -226,6 +231,8 @@ void EnzoMethodPmUpdate::compute ( Block * block) throw()
 	    vy[ipdv] = cvv*vy[ipdv] + cva*ay[ipda];
 	    y [ipdp] += cp*vy[ipdv];
 	    vy[ipdv] = cvv*vy[ipdv] + cva*ay[ipda];
+
+	    CkPrintf("Particle %d after y update, (x,y,z) = (%g,%g,%g), (vx,vy,vz) = (%g,%g,%g) (ax,ay,az) = (%g,%g,%g)\n" ,ip,x[ipdp],y[ipdp],z[ipdp],vx[ipdv],vy[ipdv],vz[ipdv],ax[ipda],ay[ipda],az[ipda]); 
 
 	  }
 	
@@ -248,11 +255,12 @@ void EnzoMethodPmUpdate::compute ( Block * block) throw()
 	    vz[ipdv] = cvv*vz[ipdv] + cva*az[ipda];
 	    z [ipdp] += cp*vz[ipdv];
 	    vz[ipdv] = cvv*vz[ipdv] + cva*az[ipda];
+	    CkPrintf("Particle %d after z update, (x,y,z) = (%g,%g,%g), (vx,vy,vz) = (%g,%g,%g) (ax,ay,az) = (%g,%g,%g)\n" ,ip,x[ipdp],y[ipdp],z[ipdp],vx[ipdv],vy[ipdv],vz[ipdv],ax[ipda],ay[ipda],az[ipda]); 
 
 	  }
         }
       }
-    } // end loop over particle types
+    }// end loop over particle types
     
 #ifdef DEBUG_UPDATE    
     CkPrintf ("DEBUG_UPDATE asum %g %g %g vsum %g %g %g\n",

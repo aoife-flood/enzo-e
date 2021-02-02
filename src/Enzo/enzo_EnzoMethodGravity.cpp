@@ -31,7 +31,8 @@ EnzoMethodGravity::EnzoMethodGravity
   // Refresh adds density_total field faces and one layer of ghost
   // zones to "B" field
 
-
+  //CkPrintf("CkIndex_EnzoBlock::p_method_gravity_end() = %d \n" , CkIndex_EnzoBlock::p_method_gravity_end());
+  //CkExit(-1);
   cello::simulation()->new_refresh_set_name(ir_post_,name());
   Refresh * refresh = cello::refresh(ir_post_);
   refresh->add_field("acceleration_x");
@@ -48,12 +49,17 @@ EnzoMethodGravity::EnzoMethodGravity
   }
 
   ir_exit_ = add_new_refresh_();
-  cello::simulation()->new_refresh_set_name(ir_post_,name()+":exit");
+  cello::simulation()->new_refresh_set_name(ir_exit_,name()+":exit");
   Refresh * refresh_exit = cello::refresh(ir_exit_);
   
   refresh_exit->add_field("potential");
 
   refresh_exit->set_callback(CkIndex_EnzoBlock::p_method_gravity_end());
+
+  CkPrintf("Printing EnzoMethodGravity's refresh object: \n");
+  refresh->print();
+  CkPrintf("Printing EnzoMethodGravity's refresh_exit object: \n");
+  refresh_exit->print();
 }
 
 //----------------------------------------------------------------------
@@ -283,6 +289,6 @@ double EnzoMethodGravity::timestep_ (Block * block) const throw()
       }
     }
   }
-  CkPrintf("Gravity timestep = %g\n", 0.5*dt);
+  //CkPrintf("Gravity timestep = %g\n", 0.5*dt);
   return 0.5*dt;
 }

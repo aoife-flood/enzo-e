@@ -16,6 +16,7 @@
 // #define DEBUG_COMPUTE
 
 #define CYCLE 0
+#define DEBUG_COMPUTE
 
 //======================================================================
 
@@ -54,12 +55,14 @@ void Block::compute_next_ ()
 
   if (method) {
 
+    int ir_post = method->refresh_id_post();
 #ifdef DEBUG_COMPUTE
     CkPrintf ("DEBUG_REFRESH %s:%d calling refresh_[enter|start]\n",__FILE__,__LINE__);
+    CkPrintf ("%d %s is leaf node?: %s \n",CkMyPe(), name().c_str(),is_leaf()?"True":"False");
+
+    CkPrintf ("PE: %d BLOCK: %s Method: %s, ir_post = %d, CkIndex_Block::p_compute_continue() = %d \n",CkMyPe(), name().c_str(),method->name().c_str(),ir_post,CkIndex_Block::p_compute_continue());
 #endif
 
-    int ir_post = method->refresh_id_post();
-    
     cello::refresh(ir_post)->set_active (is_leaf());
     
     new_refresh_start (ir_post,CkIndex_Block::p_compute_continue());

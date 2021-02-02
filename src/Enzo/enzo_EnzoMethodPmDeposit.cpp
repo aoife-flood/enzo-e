@@ -110,8 +110,13 @@ void EnzoMethodPmDeposit::compute ( Block * block) throw()
     ParticleDescr * particle_descr = cello::particle_descr();
     Grouping * particle_groups = particle_descr->groups();
 
-    int num_mass = particle_groups->size("has_mass");
+    if (particle_descr->type_exists("star")) {
+	CkPrintf("Star Particle Exists! \n");
+      }
+      
 
+    int num_mass = particle_groups->size("has_mass");
+    CkPrintf("Number of particle types with mass = %d \n" ,num_mass);
     // Accumulate particle density using CIC
 
     enzo_float cosmo_a=1.0;
@@ -128,15 +133,22 @@ void EnzoMethodPmDeposit::compute ( Block * block) throw()
     if (rank >= 2) hy *= cosmo_a;
     if (rank >= 3) hz *= cosmo_a;
 
+    double inv_vol = 1.0;
+    if (rank >= 1) inv_vol /= hx;
+    if (rank >= 2) inv_vol /= hy;
+    if (rank >= 3) inv_vol /= hz;
+    
     const double dt = alpha_ * block->dt() / cosmo_a;
 
-    int level = block->level();
-
+    //int level = block->level();
+    //CkPrintf("Block level = %d \n",level);
     // Loop over all particles that have mass
     for (int ipt = 0; ipt < num_mass; ipt++){
 
       int it = particle.type_index( particle_groups->item("has_mass",ipt));
-
+      CkPrintf("ipt = %d\n " , ipt);
+      CkPrintf("Particle Type Index = %d \n",it);
+      CkPrintf("Particle Name = %s \n",particle.type_name(it).c_str());
       // check precisions match
 
       int ia = particle.attribute_index(it,"x");
@@ -152,41 +164,44 @@ void EnzoMethodPmDeposit::compute ( Block * block) throw()
                (ba == be));
 
 
-      enzo_float dens = 0.0;
-      int ia_m = -1;
+      //enzo_float dens = 0.0;
+      //int ia_m = -1;
 
-      if (particle.has_constant (it,"mass")){
+      //if (particle.has_constant (it,"mass")){
 
-        const int ic_mass = particle.constant_index (it, "mass");
-        dens = *((enzo_float *)(particle.constant_value (it,ic_mass)));
-      } else {
-        dens = 1.0;
-        ia_m = particle.attribute_index(it, "mass");
-      }
+        const int ic_m = particle.constant_index (it, "mass");
+        //dens = *((enzo_float *)(particle.constant_value (it,ic_mass)));
+	// } else if (particle.has_attribute(it,"mass")){
+        //dens = 1.0;
+        const int ia_m = particle.attribute_index(it, "mass");
+	//CkPrintf("Mass attribute index = %d \n",ia_m);
+	//}
 
       // AJE: Make sure this is universal for all non-cosmological runs
       //
       // Scale mass by volume if particle value is mass instead of density
       // Required for Cosmology ("mass" is mass)
       // Not for Collapse ("mass" is density)
-      if (cosmology) {
-        dens *= std::pow(2.0,rank*level);
-      }
+      //if (cosmology) {
+      //  dens *= std::pow(2.0,rank*level);
+      //}
 
       // Accumulated single velocity array for Baryon deposit
+
+      CkPrintf("Number of Batches = %d \n",particle.num_batches(it));
 
       for (int ib=0; ib<particle.num_batches(it); ib++) {
 
         int np = particle.num_particles(it,ib);
-
+	CkPrintf("Number of star Particles = %d \n",np);
         // Find the mass of each particle. If cosntant generate array of
         // constant values in order to simply code below
-        enzo_float * pdens = NULL;
+        enzo_float * pmass = NULL;
         if (ia_m > 0){
-          pdens = (enzo_float *) particle.attribute_array( it, ia_m, ib);
+          pmass = (enzo_float *) particle.attribute_array( it, ia_m, ib);
         } else {
-          pdens = new enzo_float[np];
-          for (int ip = 0; ip<np; ip++) pdens[ip] = 1.0;
+          pmass = new enzo_float[np];
+          for (int ip = 0; ip<np; ip++) pmass[ip] = *((enzo_float *)(particle.constant_value (it,ic_m)));
         }
 
 
@@ -217,9 +232,8 @@ void EnzoMethodPmDeposit::compute ( Block * block) throw()
 
 	    double x0 = 1.0 - (tx - floor(tx));
 	    double x1 = 1.0 - x0;
-
-	    de_p[ix0] += pdens[ip]*dens*x0;
-	    de_p[ix1] += pdens[ip]*dens*x1;
+	    de_p[ix0] += pmass[ip]*inv_vol*x0;
+	    de_p[ix1] += pmass[ip]*inv_vol*x1;
 
 	  }
 
@@ -259,30 +273,30 @@ void EnzoMethodPmDeposit::compute ( Block * block) throw()
 	    double x1 = 1.0 - x0;
 	    double y1 = 1.0 - y0;
 
-	    if ( dens < 0.0) {
-	      CkPrintf ("%s:%d ERROR: dens = %f\n", __FILE__,__LINE__,dens);
-	    }
+	    // if ( dens < 0.0) {
+	    //  CkPrintf ("%s:%d ERROR: inv_vol = %f\n", __FILE__,__LINE__,inv_vol);
+	    // }
 
-	    de_p[ix0+mx*iy0] += pdens[ip]*dens*x0*y0;
-	    de_p[ix1+mx*iy0] += pdens[ip]*dens*x1*y0;
-	    de_p[ix0+mx*iy1] += pdens[ip]*dens*x0*y1;
-	    de_p[ix1+mx*iy1] += pdens[ip]*dens*x1*y1;
+	    de_p[ix0+mx*iy0] += pmass[ip]*inv_vol*x0*y0;
+	    de_p[ix1+mx*iy0] += pmass[ip]*inv_vol*x1*y0;
+	    de_p[ix0+mx*iy1] += pmass[ip]*inv_vol*x0*y1;
+	    de_p[ix1+mx*iy1] += pmass[ip]*inv_vol*x1*y1;
 
 	    if ( de_p[ix0+mx*iy0] < 0.0) {
 	      CkPrintf ("%s:%d ERROR: de_p %d %d = %f\n",
-	   	        __FILE__,__LINE__,ix0,iy0,dens);
+	   	        __FILE__,__LINE__,ix0,iy0,inv_vol);
 	    }
 	    if ( de_p[ix1+mx*iy0] < 0.0) {
 	      CkPrintf ("%s:%d ERROR: de_p %d %d = %f\n",
-		        __FILE__,__LINE__,ix1,iy0,dens);
+		        __FILE__,__LINE__,ix1,iy0,inv_vol);
 	    }
 	    if ( de_p[ix0+mx*iy1] < 0.0) {
 	    CkPrintf ("%s:%d ERROR: de_p %d %d = %f\n",
-		        __FILE__,__LINE__,ix0,iy1,dens);
+		        __FILE__,__LINE__,ix0,iy1,inv_vol);
 	    }
 	    if ( de_p[ix1+mx*iy1] < 0.0) {
 	      CkPrintf ("%s:%d ERROR: de_p %d %d = %f\n",
-		        __FILE__,__LINE__,ix1,iy1,dens);
+		        __FILE__,__LINE__,ix1,iy1,inv_vol);
 	    }
 	  }
 
@@ -340,20 +354,24 @@ void EnzoMethodPmDeposit::compute ( Block * block) throw()
 	    double y1 = 1.0 - y0;
 	    double z1 = 1.0 - z0;
 
-	    de_p[ix0+mx*(iy0+my*iz0)] += pdens[ip]*dens*x0*y0*z0;
-	    de_p[ix1+mx*(iy0+my*iz0)] += pdens[ip]*dens*x1*y0*z0;
-	    de_p[ix0+mx*(iy1+my*iz0)] += pdens[ip]*dens*x0*y1*z0;
-	    de_p[ix1+mx*(iy1+my*iz0)] += pdens[ip]*dens*x1*y1*z0;
-	    de_p[ix0+mx*(iy0+my*iz1)] += pdens[ip]*dens*x0*y0*z1;
-	    de_p[ix1+mx*(iy0+my*iz1)] += pdens[ip]*dens*x1*y0*z1;
-	    de_p[ix0+mx*(iy1+my*iz1)] += pdens[ip]*dens*x0*y1*z1;
-	    de_p[ix1+mx*(iy1+my*iz1)] += pdens[ip]*dens*x1*y1*z1;
+	    CkPrintf("Mass of particle[%d] = %g \n",ip,pmass[ip]);
+	    CkPrintf("inv_vol = %g \n",inv_vol);
+	    CkPrintf("density = %g \n",pmass[ip]*inv_vol);
+	    //CkExit(-1);
+	    de_p[ix0+mx*(iy0+my*iz0)] += pmass[ip]*inv_vol*x0*y0*z0;
+	    de_p[ix1+mx*(iy0+my*iz0)] += pmass[ip]*inv_vol*x1*y0*z0;
+	    de_p[ix0+mx*(iy1+my*iz0)] += pmass[ip]*inv_vol*x0*y1*z0;
+	    de_p[ix1+mx*(iy1+my*iz0)] += pmass[ip]*inv_vol*x1*y1*z0;
+	    de_p[ix0+mx*(iy0+my*iz1)] += pmass[ip]*inv_vol*x0*y0*z1;
+	    de_p[ix1+mx*(iy0+my*iz1)] += pmass[ip]*inv_vol*x1*y0*z1;
+	    de_p[ix0+mx*(iy1+my*iz1)] += pmass[ip]*inv_vol*x0*y1*z1;
+	    de_p[ix1+mx*(iy1+my*iz1)] += pmass[ip]*inv_vol*x1*y1*z1;
 
 	  }
         }
 
         if (ia_m < 0){
-          delete [] pdens;
+          delete [] pmass;
         }
 
       } // end loop over batches

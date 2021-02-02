@@ -1,4 +1,4 @@
-   /// See LICENSE_CELLO file for license and copyright information
+/// See LICENSE_CELLO file for license and copyright information
 /// @file	enzo_EnzoMethodAccretion.cpp
 
 ///
@@ -21,6 +21,8 @@ EnzoMethodAccretion::EnzoMethodAccretion
   cello::simulation()->new_refresh_set_name(ir_post_,name());
   Refresh * refresh = cello::refresh(ir_post_);
   refresh->add_all_fields();
+  CkPrintf("Printing EnzoMethodAccretion's refresh object: \n");
+  refresh->print();
 
   dual_energy_         = field_descr->is_field("internal_energy") &&
                          field_descr->is_field("total_energy");
@@ -120,7 +122,7 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
 
   int it = particle.type_index("star");
   int feedback_count = 0;
-
+  CkPrintf("Number of Star Particles = %d \n",particle.num_particles(it));
   if (particle.num_particles(it) > 0 ){
 
     CkPrintf("Found a particle\n");
@@ -128,7 +130,7 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
 
     
     const int ia_m = particle.attribute_index (it, "mass");
-    //    const int ia_pm = particle.attribute_index (it, "prevmass");
+    const int ia_pm = particle.attribute_index (it, "prevmass");
     const int ia_x = (rank >= 1) ? particle.attribute_index (it, "x") : -1;
     const int ia_y = (rank >= 2) ? particle.attribute_index (it, "y") : -1;
     const int ia_z = (rank >= 3) ? particle.attribute_index (it, "z") : -1;
@@ -149,15 +151,15 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
     const int dc = particle.stride(it, ia_c);
     const int dacc = particle.stride(it, ia_acc);
     const int nb = particle.num_batches(it);
-    CkPrintf("Num Batches = %d\n", nb);
+    //CkPrintf("Num Batches = %d\n", nb);
 
     for (int ib=0; ib<nb; ib++){
       enzo_float *px=0, *py=0, *pz=0;
       enzo_float *pvx=0, *pvy=0, *pvz=0;
       enzo_float *plifetime=0, *pcreation=0, *pmass=0, *paccrate=0, *paccrate_time=0;
-      //enzo_float *prevmass=0;
+      enzo_float *prevmass=0;
       int *ptimeindex=0, *pclass=0;
-      //prevmass = (enzo_float *) particle.attribute_array(it, ia_pm, ib);
+      prevmass = (enzo_float *) particle.attribute_array(it, ia_pm, ib);
       pmass = (enzo_float *) particle.attribute_array(it, ia_m, ib);
       ptimeindex = (int *)  particle.attribute_array(it, ia_timeindex, ib);
       pclass = (int *)  particle.attribute_array(it, ia_class, ib);
@@ -173,10 +175,10 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
 
       plifetime = (enzo_float *) particle.attribute_array(it, ia_l, ib);
       pcreation = (enzo_float *) particle.attribute_array(it, ia_c, ib);
-      const int paccradius = 4;
+      const int paccradius = 4; // need to make this read in a parameter
       
       int np = particle.num_particles(it,ib);
-      CkPrintf("Num Particles = %d\n", np);
+      CkPrintf("Num Particles in this Batch= %d\n", np);
       
       /*Loop over all particles in this batch */
       for (int ip=0; ip<np; ip++){
@@ -213,12 +215,12 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
 	cell_vel[0] = velocity_x[i];
 	cell_vel[1] = velocity_y[i];
 	cell_vel[2] = velocity_z[i];
-	CkPrintf("Pos = %e %e %e\n", px[ipdp], py[ipdp], pz[ipdp]);
-	CkPrintf("Vel = %e %e %e\n", pvel[0]/1e5, pvel[1]/1e5, pvel[2]/1e5);
-	CkPrintf("Cell temperature = %f\n", cell_temp);
+	//CkPrintf("Pos = %e %e %e\n", px[ipdp], py[ipdp], pz[ipdp]);
+	//CkPrintf("Vel = %e %e %e\n", pvel[0]/1e5, pvel[1]/1e5, pvel[2]/1e5);
+	//CkPrintf("Cell temperature = %f\n", cell_temp);
 	const enzo_float bondi_hoyle_radius =
 	  calculate_bondi_hoyle_radius(pmass[ipdp], pvel, cell_temp, cell_vel); 
-	CkPrintf("Bondi-Hoyle Radius = %e cm\n", bondi_hoyle_radius);
+	//CkPrintf("Bondi-Hoyle Radius = %e cm\n", bondi_hoyle_radius);
 
 	/* Compute kernel radius */
 	enzo_float kernel_radius = 0.0;
@@ -264,7 +266,7 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
 		   iy < gy || iy >(ny+gy) ||
 		   iz < gz || iz >(nz+gz))
 		  {
-		    CkPrintf("So Cell %d %d %d is inside Accretion zone\n", ix, iy, iz);
+		    //CkPrintf("So Cell %d %d %d is inside Accretion zone\n", ix, iy, iz);
 		    num_ghost_cells++;
 		  }
 		
@@ -301,7 +303,7 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
 		   prescription_);
 	  double rho_infinity = avg_density /
 	    bondi_alpha((float)1.2*dx / bondi_hoyle_radius);
-	  double lambda_c = 0.25*exp(1.5);
+	  double lambda_c = 0.25*exp(1.5); // Only valid for isothermal gas
 	  /* Bondi Hoyle */
 	  //CkPrintf("rho_infinity = %e\n", rho_infinity);
 	  //CkPrintf("cInfinity = %e\n", cInfinity);
@@ -311,7 +313,7 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
 			   sqrt(pow(lambda_c*cInfinity,2) + pow(vInfinity,2)));
 	  //CkPrintf("accretion_rate = %e\n", accretion_rate);
 	}
-	CkPrintf("!!!!!!!!!!!!!accretion_rate = %e Msolar/yr\n", accretion_rate*cello::yr_s/cello::mass_solar);
+	//CkPrintf("!!!!!!!!!!!!!accretion_rate = %e Msolar/yr\n", accretion_rate*cello::yr_s/cello::mass_solar);
 	//CkExit(-99);
 
 	enzo_float DeltaV[3] = {0.0, 0.0, 0.0}; 
@@ -676,10 +678,10 @@ double EnzoMethodAccretion::calculate_bondi_hoyle_radius(enzo_float pmass,
   const double mean_particle_mass = cello::mass_hydrogen*enzo_config->ppm_mol_weight;
   const double cInfinity_squared = cello::kboltz * cell_temp / mean_particle_mass;
   BHradius = cello::grav_constant*pmass/(pow(vInfinity,2) + cInfinity_squared);
-  CkPrintf("%s: vInfinity = %f km/s\n", __FUNCTION__,  (vInfinity)/1e5);
-  CkPrintf("%s: cInfinity = %f km/s\n", __FUNCTION__,  sqrt(cInfinity_squared)/1e5);
-  CkPrintf("%s: CellTemperature = %f K\n", __FUNCTION__, cell_temp);
-  CkPrintf("%s: ParticleMass = %e Msolar\n", __FUNCTION__, pmass/cello::mass_solar);
+  //CkPrintf("%s: vInfinity = %f km/s\n", __FUNCTION__,  (vInfinity)/1e5);
+  //CkPrintf("%s: cInfinity = %f km/s\n", __FUNCTION__,  sqrt(cInfinity_squared)/1e5);
+  //CkPrintf("%s: CellTemperature = %f K\n", __FUNCTION__, cell_temp);
+  //CkPrintf("%s: ParticleMass = %e Msolar\n", __FUNCTION__, pmass/cello::mass_solar);
   return BHradius;
 }
 

@@ -44,6 +44,7 @@ int EnzoRefineParticleMass::apply ( Block * block ) throw ()
   block->lower (&xm,&ym,&zm);
   block->upper (&xp,&yp,&zp);
   const int it = particle.type_index ("dark");
+  // STEFAN ARRIDGE: TODO: INCLUDE ALL PARTICLES THAT HAVE MASS
 
   const int ia_x = particle.attribute_position (it,0);
   const int ia_y = particle.attribute_position (it,1);
