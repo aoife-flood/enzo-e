@@ -61,10 +61,7 @@ void EnzoComputeCicInterp::compute_(Block * block)
 
   Field field = enzo_block->data()->field();
   Particle particle = enzo_block->data()->particle();
-
-  CkPrintf("%s: %s: field_id = %d \n",__FILE__,__FUNCTION__,if_);
-  CkPrintf("%s: %s: particle_type_index = %d \n",__FILE__,__FUNCTION__,it_p_);
-  CkPrintf("%s: %s: particle_attribute_index = %d \n",__FILE__,__FUNCTION__,ia_p_);
+  
   enzo_float * vf = (enzo_float*)field.values(if_);
 
   const int ia_x = particle.attribute_position(it_p_,0);
@@ -225,10 +222,6 @@ void EnzoComputeCicInterp::compute_(Block * block)
 			y1*(z0*vf0[i010] + z1*vf0[i011])) 
 	  +         x1*(y0*(z0*vf0[i100] + z1*vf0[i101]) +
 			y1*(z0*vf0[i110] + z1*vf0[i111]));
-
-	CkPrintf("%s: %s: x0,y0,z0,x1,y1,z1 = (%g,%g,%g,%g,%g,%g) \n",__FILE__,__FUNCTION__,x0,y0,z0,x1,y1,z1);
-	CkPrintf("%s: %s: vf0[%d],vf0[%d],vf0[%d],vf0[%d],vf0[%d],vf0[%d],vf0[%d],vf0[%d] = %g,%g,%g,%g,%g,%g,%g,%g \n",__FILE__,__FUNCTION__,i000,i001,i010,i011,i100,i101,i110,i111,vf0[i000],vf0[i001],vf0[i010],vf0[i011],vf0[i100],vf0[i101],vf0[i110],vf0[i111]);
-	CkPrintf("%s: %s: vp[ip*da] = %g \n",__FILE__,__FUNCTION__,vp[ip*da]);
 	
       }
     }

@@ -279,7 +279,7 @@ void EnzoMethodAccretion::compute_ (Block * block) throw()
 	CkPrintf("total_gas_mass = %e Msun\n", total_gas_mass/cello::mass_solar);
 	if(num_ghost_cells > 0) {
 	  CkPrintf("num_ghost_cells = %d\n", num_ghost_cells);
-	  CkExit(-99);
+	  //CkExit(-99);
 	}
 	double weight = 1.0/numcells;
 	double avg_density = weighted_sum / sum_of_weights;

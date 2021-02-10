@@ -65,7 +65,7 @@ void EnzoMethodPmDeposit::pup (PUP::er &p)
 void EnzoMethodPmDeposit::compute ( Block * block) throw()
 {
 
-  if (block->is_leaf()) {
+  // if (block->is_leaf()) {
 
     Particle particle (block->data()->particle());
     Field    field    (block->data()->field());
@@ -110,13 +110,7 @@ void EnzoMethodPmDeposit::compute ( Block * block) throw()
     ParticleDescr * particle_descr = cello::particle_descr();
     Grouping * particle_groups = particle_descr->groups();
 
-    if (particle_descr->type_exists("star")) {
-	CkPrintf("Star Particle Exists! \n");
-      }
-      
-
     int num_mass = particle_groups->size("has_mass");
-    CkPrintf("Number of particle types with mass = %d \n" ,num_mass);
     // Accumulate particle density using CIC
 
     enzo_float cosmo_a=1.0;
@@ -146,9 +140,6 @@ void EnzoMethodPmDeposit::compute ( Block * block) throw()
     for (int ipt = 0; ipt < num_mass; ipt++){
 
       int it = particle.type_index( particle_groups->item("has_mass",ipt));
-      CkPrintf("ipt = %d\n " , ipt);
-      CkPrintf("Particle Type Index = %d \n",it);
-      CkPrintf("Particle Name = %s \n",particle.type_name(it).c_str());
       // check precisions match
 
       int ia = particle.attribute_index(it,"x");
@@ -165,15 +156,15 @@ void EnzoMethodPmDeposit::compute ( Block * block) throw()
 
 
       //enzo_float dens = 0.0;
-      //int ia_m = -1;
-
+      const int ia_m = particle.attribute_index(it,"mass");
+      const int ic_m = (particle.has_constant(it,"mass")) ? particle.constant_index(it,"mass") : -1;
+      
       //if (particle.has_constant (it,"mass")){
-
-        const int ic_m = particle.constant_index (it, "mass");
+      //const int ic_m = particle.constant_index (it, "mass");
         //dens = *((enzo_float *)(particle.constant_value (it,ic_mass)));
 	// } else if (particle.has_attribute(it,"mass")){
         //dens = 1.0;
-        const int ia_m = particle.attribute_index(it, "mass");
+        //const int ia_m = particle.attribute_index(it, "mass");
 	//CkPrintf("Mass attribute index = %d \n",ia_m);
 	//}
 
@@ -455,7 +446,7 @@ void EnzoMethodPmDeposit::compute ( Block * block) throw()
     double sum_de_p = 0.0;
     for (int i=0; i<mx*my*mz; i++) sum_de_p += de_p[i];
 
-  }
+    //  }
 
     
   block->compute_done(); 

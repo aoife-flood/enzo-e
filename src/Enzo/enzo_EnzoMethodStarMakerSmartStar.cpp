@@ -26,6 +26,14 @@ EnzoMethodStarMakerSmartStar::EnzoMethodStarMakerSmartStar
 {
   // To Do: Make the seed an input parameter
   srand(time(NULL)); // need randum number generator for later
+  cello::simulation()->new_refresh_set_name(ir_post_,name());
+  Refresh * refresh = cello::refresh(ir_post_);
+  CkPrintf("%s:%s:%d: Printing refresh object \n",__FILE__,__FUNCTION__,__LINE__);
+  refresh->print();
+  ParticleDescr * particle_descr = cello::particle_descr();
+  refresh->add_particle(particle_descr->type_index("star"));
+  CkPrintf("%s:%s:%d: Printing refresh object \n",__FILE__,__FUNCTION__,__LINE__);
+  refresh->print();
   return;
 }
 
@@ -55,10 +63,10 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   //CkPrintf("OK we at least check for smart star formation!\n");
   
   // Are we at the highest level?
-  if (! block->is_leaf()){
-    block->compute_done();
-    return;
-  }
+  //if (! block->is_leaf()){
+  //  block->compute_done();
+  //  return;
+  //}
 
   EnzoBlock * enzo_block = enzo::block(block);
   const EnzoConfig * enzo_config = enzo::config();
@@ -72,7 +80,9 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   block->cell_width(&dx, &dy, &dz);
   
   double lx, ly, lz;
+  double ux, uy, uz;
   block->lower(&lx,&ly,&lz);
+  block->upper(&ux,&uy,&uz);
   accretion_radius_cells_ = enzo_config->method_star_maker_accretion_radius_cells;
   //CkPrintf("Accretion radius cells: %d \n",accretion_radius_cells_);
   // declare particle position arrays
@@ -136,6 +146,26 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   enzo_float * paccrate = 0;
   enzo_float * paccrate_time = 0;
 
+  
+
+  int nb = particle.num_batches(it);
+  int ippp;
+  int ii;
+  
+  CkPrintf("%s: %s: %d: Block name = %s \n",__FILE__,__FUNCTION__,__LINE__,block->name().c_str());
+  CkPrintf("%s: %s: %d: Block lower = [%g,%g,%g] \n",__FILE__,__FUNCTION__,__LINE__,lx,ly,lz);
+  CkPrintf("%s: %s: %d: Block upper = [%g,%g,%g] \n",__FILE__,__FUNCTION__,__LINE__,ux,uy,uz);
+  CkPrintf("%s: %s: %d: Number of batches = %d \n",__FILE__,__FUNCTION__,__LINE__,nb);
+  for (int ibb = 0 ; ibb < nb ; ibb++){
+    CkPrintf("%s: %s: %d: Batch %d, Number of particles = %d \n",__FILE__,__FUNCTION__,__LINE__,ibb,particle.num_particles(it,ibb));
+    px = (enzo_float *) particle.attribute_array(it, ia_x, ibb);
+    py = (enzo_float *) particle.attribute_array(it, ia_y, ibb);
+    pz = (enzo_float *) particle.attribute_array(it, ia_z, ibb);
+    for (ii=0; ii<particle.num_particles(it,ibb); ii++) {
+      particle.index(ii, &ibb, &ippp);
+      CkPrintf("%s: %s: %d: Particle %d:  x,y,z = [%g,%g,%g] \n",__FILE__,__FUNCTION__,__LINE__,ii,px[ippp],py[ippp],pz[ippp]);
+    }
+  }
   // obtain the particle stride length
   const int ps = particle.stride(it, ia_m);
 

@@ -14,7 +14,6 @@
 
 // #define DEBUG_ADAPT
 // #define DEBUG_FACE
-
 // #define DEBUG_NEW_REFRESH
 
 #ifdef DEBUG_FACE
