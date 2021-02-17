@@ -1,20 +1,22 @@
 /// See LICENSE_CELLO file for license and copyright information
 
-/// @file	enzo_EnzoMethodStarMakerStochasticSF.cpp
-/// @author     Andrew Emerick (aemerick11@gmail.com)
+/// @file	enzo_EnzoMethodStarMakerFIRE2.cpp
+/// @author     John Wise (jwise@physics.gatech.edu)
 /// @date
-/// @brief  Implements the star maker stochastic star formation clas
+/// @brief  Implements the star maker class using FIRE-2
 ///
 ///     Derived star maker class that actually makes stars. This is
-///     adapted after the star_maker_ssn method from Enzo
+///     adapted from the algorithm described in Hopkins et al. 
+///     (2018, MNRAS, 480, 800)
 
 #include "cello.hpp"
 #include "enzo.hpp"
 #include <time.h>
 
-
-// #define DEBUG_SF
-
+// TODO (JHW, 27 Feb 2020)
+// Copied from EnzoMethodStarMakerStochasticSF with no changes whatsoever.
+// Plan is to make this a separate class that inherits from the stochastic
+// algorithm.
 
 //-------------------------------------------------------------------
 
@@ -23,7 +25,7 @@ EnzoMethodStarMakerStochasticSF::EnzoMethodStarMakerStochasticSF
   : EnzoMethodStarMaker()
 {
   // To Do: Make the seed an input parameter
-  srand(time(NULL)); // need randum number generator for later
+  //srand(time(NULL)); // need randum number generator for later
   return;
 }
 
@@ -73,13 +75,12 @@ void EnzoMethodStarMakerStochasticSF::compute ( Block *block) throw()
   // declare particle position arrays
   //  default particle type is "star", but this will default
   //  to subclass particle_type
-  const int it    = particle.type_index (this->particle_type());
+  const int it   = particle.type_index (this->particle_type());
 
-  const int ia_id = particle.attribute_index (it, "id");
-  const int ia_m  = particle.attribute_index (it, "mass");
-  const int ia_x  = particle.attribute_index (it, "x");
-  const int ia_y  = particle.attribute_index (it, "y");
-  const int ia_z  = particle.attribute_index (it, "z");
+  const int ia_m = particle.attribute_index (it, "mass");
+  const int ia_x = particle.attribute_index (it, "x");
+  const int ia_y = particle.attribute_index (it, "y");
+  const int ia_z = particle.attribute_index (it, "z");
   const int ia_vx = particle.attribute_index (it, "vx");
   const int ia_vy = particle.attribute_index (it, "vy");
   const int ia_vz = particle.attribute_index (it, "vz");
@@ -104,8 +105,6 @@ void EnzoMethodStarMakerStochasticSF::compute ( Block *block) throw()
   enzo_float * pmetal = 0;
   enzo_float * pform  = 0;
   enzo_float * plifetime = 0;
-
-  int64_t * id = 0;
 
   // obtain the particle stride length
   const int ps = particle.stride(it, ia_m);
@@ -175,25 +174,11 @@ void EnzoMethodStarMakerStochasticSF::compute ( Block *block) throw()
         // Apply the criteria for star formation
         //
         if (! this->check_number_density_threshold(ndens)) continue;
-        if (! this->check_self_gravitating( mean_particle_mass, rho_cgs, temperature[i],
-                                            velocity_x, velocity_y, velocity_z,
-                                            enzo_units->length(), enzo_units->density(),
-                                            i, 1, my, my*mz, dx, dy, dz)) continue;
-
-        // AJE: TO DO ---
-        //      If Grackle is used, check for this and use the H2
-        //      fraction from there instead if h2 is used. Maybe could
-        //      do this in the self shielding factor function
-
-        // Only allow star formation out of the H2 shielding component (if used)
-        const double f_h2 = this->h2_self_shielding_factor(density,
-                                                           metallicity,
-                                                           enzo_units->density(),
-                                                           enzo_units->length(),
-                                                           i, 1, my, my*mz,
-                                                           dx, dy, dz);
-        mass *= f_h2; // apply correction (f_h2 = 1 if not used)
-
+        // if (! this->check_self_gravitating(mean_particle_mass, rho_cgs, temperature[i],
+        //                                    enzo_units->length(), enzo_units->density(),
+        //                                    velocity_x, velocity_y, velocity_z, 
+        //                                    i, 1, my, my*mz, dx)) continue;
+        // if (! this->check_h2_self_shielding(density, metallicity, i, 1, my, my*mz, dx)) continue;
         if (! this->check_velocity_divergence(velocity_x, velocity_y,
                                               velocity_z, i,
                                               1, my, my*mz)) continue;
@@ -223,24 +208,8 @@ void EnzoMethodStarMakerStochasticSF::compute ( Block *block) throw()
             star_fraction = this->star_particle_min_mass_ / mass;
           }
         } else {
-          // else allow the total mass of stars to form to be up to the
-          // maximum particle mass OR the maximum gas->stars conversion fraction.
-          // AJE: Note, this forces there to be at most one particle formed per
-          //      cell per timestep. In principle, this could be bad if
-          //      the computed gas->stars mass (above) is >> than maximum particle
-          //      mass b/c it would artificially extend the lifetime of the SF
-          //      region and presumably increase the amount of SF and burstiness
-          //      of the SF and feedback cycle. Check this!!!!
-
-          if (star_fraction * mass > this->star_particle_max_mass_){
-#ifdef DEBUG_SF
-            CkPrintf( "DEBUG_SF: StochasticSF - SF mass = %g ; max particle mass = %g\n",
-                                         star_fraction*mass, this->star_particle_max_mass_);
-#endif
-            star_fraction = this->star_particle_max_mass_ / mass;
-          }
-
-          star_fraction = std::min(star_fraction, this->maximum_star_fraction_);
+          // (else, leave star fraction alone )
+          star_fraction = this->star_particle_min_mass_ / mass;
         }
 
         count++; //
@@ -256,10 +225,6 @@ void EnzoMethodStarMakerStochasticSF::compute ( Block *block) throw()
         int io = ipp; // ipp*ps
         // pointer to mass array in block
         pmass = (enzo_float *) particle.attribute_array(it, ia_m, ib);
-
-        id = (int64_t * ) particle.attribute_array(it, ia_id, ib);
-
-        id[io] = CkMyPe() + (ParticleData::id_counter[cello::index_static()]++) * CkNumPes();
 
         pmass[io] = star_fraction * (density[i] * dx * dy * dz);
         px = (enzo_float *) particle.attribute_array(it, ia_x, ib);
@@ -287,7 +252,7 @@ void EnzoMethodStarMakerStochasticSF::compute ( Block *block) throw()
         pform     = (enzo_float *) particle.attribute_array(it, ia_to, ib);
 
         pform[io]     =  enzo_block->time();   // formation time
-        plifetime[io] =  tdyn;  // 10.0 * cello::Myr_s / enzo_units->time() ; // lifetime
+        plifetime[io] =  10.0 * cello::Myr_s / enzo_units->time() ; // lifetime
 
         if (metal){
           pmetal     = (enzo_float *) particle.attribute_array(it, ia_metal, ib);
@@ -298,13 +263,6 @@ void EnzoMethodStarMakerStochasticSF::compute ( Block *block) throw()
         density[i] = (1.0 - star_fraction) * density[i];
         double scale = (1.0 - star_fraction) / 1.0;
 
-        if (density[i] < 0){
-          CkPrintf("StochasticSF: density index star_fraction mass: %g %i %g %g\n",
-                   density[i],i,star_fraction,mass);
-          ERROR("EnzoMethodStarMakerStochasticSF::compute()",
-                "Negative densities in star formation");
-        }
-
         // rescale tracer fields to maintain constant mass fraction
         // with the corresponding new density...
         //    scale = new_density / old_density
@@ -314,8 +272,9 @@ void EnzoMethodStarMakerStochasticSF::compute ( Block *block) throw()
   } // end loop iz
 
   if (count > 0){
-      CkPrintf("StochasticSF: Number of particles formed = %i \n", count);
+      std::cout << "Number of particles formed:   " << count << "\n";
   }
+
 
   block->compute_done();
 

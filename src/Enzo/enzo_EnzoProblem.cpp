@@ -130,7 +130,7 @@ Initial * EnzoProblem::create_initial_
 #endif /* CONFIG_USE_GRACKLE */
   } else if (type == "feedback_test") {
     initial = new EnzoInitialFeedbackTest(enzo_config);
-    
+
   } else if (type == "vlct_bfield") {
     initial = new EnzoInitialBCenter(parameters, cycle, time,
 				     enzo_config->initial_bcenter_update_etot);
@@ -153,7 +153,7 @@ Initial * EnzoProblem::create_initial_
        enzo_config->initial_cloud_perturb_stddev,
        enzo_config->initial_cloud_trunc_dev,
        enzo_config->initial_cloud_perturb_seed);
-    
+
   } else if (type == "collapse") {
     initial = new EnzoInitialCollapse
       (cycle,time,
@@ -354,10 +354,10 @@ Solver * EnzoProblem::create_solver_
     solve_type = solve_unknown;
   }
 
-#ifdef DEBUG_NEW_REFRESH  
+#ifdef DEBUG_NEW_REFRESH
   CkPrintf ("DEBUG_NEW_REFRESH create solver %s\n",
 	    enzo_config->solver_list[index_solver].c_str());
-#endif  
+#endif
   if (solver_type == "cg") {
 
     solver = new EnzoSolverCg
@@ -634,7 +634,7 @@ Method * EnzoProblem::create_method_
        enzo_config->method_gravity_grav_const,
        enzo_config->method_gravity_order,
        enzo_config->method_gravity_accumulate);
-      
+
   } else if (name == "mhd_vlct") {
 
     method = new EnzoMethodMHDVlct
@@ -716,7 +716,7 @@ Prolong * EnzoProblem::create_prolong_
   Prolong * prolong = 0;
 
   const EnzoConfig * enzo_config = enzo::config();
-  
+
   if (type == "enzo") {
     prolong = new EnzoProlong
       (enzo_config->prolong_enzo_type,

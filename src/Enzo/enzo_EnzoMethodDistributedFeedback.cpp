@@ -13,7 +13,7 @@
 #include "cello.hpp"
 #include "enzo.hpp"
 
-
+// #define DEBUG_FEEDBACK
 
 //
 // ------------------------- S99 Lookup functions -----------------------------
@@ -314,7 +314,18 @@ EnzoMethodDistributedFeedback::EnzoMethodDistributedFeedback
   Refresh * refresh = cello::refresh(ir_post_);
   refresh->add_all_fields();
 
+  ParticleDescr * particle_descr = cello::particle_descr();
+
+  //
+  // Refresh copies of all star particles on neighboring grids
+  //
+  const int it = particle_descr->type_index("star");
+  const bool copy = true;
+  // copy all neighboring particles of this type (default false)
+  refresh->add_particle(it, copy);
+
   FieldDescr * field_descr = cello::field_descr();
+
 
   dual_energy_         = field_descr->is_field("internal_energy") &&
                          field_descr->is_field("total_energy");
@@ -341,7 +352,7 @@ EnzoMethodDistributedFeedback::EnzoMethodDistributedFeedback
 
   // Time of first SN (input in Myr, stored in yr)
   //     Forces a fixed delay time for all SNe
-  time_first_sn_ = enzo_config->method_feedback_time_first_sn * 1000.0;
+  time_first_sn_ = enzo_config->method_feedback_time_first_sn * 1.0E6;
 
 
 
@@ -412,13 +423,18 @@ void EnzoMethodDistributedFeedback::compute_ (Block * block)
 
   // Polynomial coefficients for the fit to the stellar mass distribution
   // as a function of delay time.
-  const double p_mass[10] = {
+  const double poly_mass[10] = {
     4.42035634891,        -13.2890466089,        26.1103296098,        -30.1876007562,
     21.8976126631,        -10.2544493943,        3.09621304958,        -0.581870413299,
     0.0618795946119,      -0.00284352366041
   };
 
+
   if (particle.num_particles(it) > 0 ){
+#ifdef DEBUG_FEEDBACK
+    CkPrintf("DistributedFeedback (%s) -- XYZXYZ Number of Particles %i\n", enzo_block->name().c_str(), particle.num_particles(it));
+#endif
+    const int ia_id = particle.attribute_index (it, "id");
 
     const int ia_m = particle.attribute_index (it, "mass");
 
@@ -432,19 +448,25 @@ void EnzoMethodDistributedFeedback::compute_ (Block * block)
     const int ia_l = particle.attribute_index (it, "lifetime");
     const int ia_c = particle.attribute_index (it, "creation_time");
     const int ia_mf = particle.attribute_index (it, "metal_fraction");
+    const int ia_loc = particle.attribute_index (it, "is_local");
 
+    const int did = particle.stride(it, ia_id);
     const int dm = particle.stride(it, ia_m);
     const int dp = particle.stride(it, ia_x);
     const int dv = particle.stride(it, ia_vx);
     const int dl = particle.stride(it, ia_l);
     const int dc = particle.stride(it, ia_c);
     const int dmf = particle.stride(it, ia_mf);
+    const int dloc = particle.stride(it, ia_loc);
 
     const int nb = particle.num_batches(it);
 
     for (int ib=0; ib<nb; ib++){
       enzo_float *px=0, *py=0, *pz=0, *pvx=0, *pvy=0, *pvz=0;
       enzo_float *plifetime=0, *pcreation=0, *pmass=0, *pmetal=0;
+      int64_t *id=0, *is_local=0;
+
+      id = (int64_t * ) particle.attribute_array(it, ia_id, ib);
 
       pmass = (enzo_float *) particle.attribute_array(it, ia_m, ib);
       pmetal = (enzo_float *) particle.attribute_array(it, ia_mf, ib);
@@ -459,18 +481,30 @@ void EnzoMethodDistributedFeedback::compute_ (Block * block)
       plifetime = (enzo_float *) particle.attribute_array(it, ia_l, ib);
       pcreation = (enzo_float *) particle.attribute_array(it, ia_c, ib);
 
+      is_local = (int64_t *) particle.attribute_array(it, ia_loc, ib);
+
       int np = particle.num_particles(it,ib);
 
       for (int ip=0; ip<np; ip++){
         // AE: Check and see if these differ....
-        int ipdp = ip*dp;
-        int ipdm = ip*dm;
-        int ipdv = ip*dv;
-        int ipdl = ip*dl;
-        int ipdc = ip*dc;
-        int ipdmf = ip*dmf;
+        const int ipid = ip*did;
+        const int ipdp = ip*dp;
+        const int ipdm = ip*dm;
+        const int ipdv = ip*dv;
+        const int ipdl = ip*dl;
+        const int ipdc = ip*dc;
+        const int ipdmf = ip*dmf;
+        const int ipdloc = ip*dloc;
 
+        int vals3[3];
+        enzo_block->index().values(vals3);
 
+#ifdef DEBUG_FEEDBACK
+        CkPrintf("DistributedFeedback (%s) -- Particle %i of %i particles in batch %i local at pos (%g, %g, %g) - local = %i\n", enzo_block->name().c_str(),
+                                                                                           ip, np, ib,
+                                                                                           px[ipdp],py[ipdp],pz[ipdp],
+                                                                                           is_local[ipdloc]);
+#endif
 /*
         // negative lifetime are particles that have alreahy gone SN
         // creation time must be > 0
@@ -488,7 +522,7 @@ void EnzoMethodDistributedFeedback::compute_ (Block * block)
 // --------------------------------------- start checking if explosion occurs ---
 
         int explosion_flag = -1, will_explode = -1;
-        double soonest_explosion = -1.0, s49_tot = -1.0, td7 = -1.0;
+        double soonest_explosion = -1.0, s49_tot = 0.0, td7 = -1.0;
         double star_age = 0.0;
         unsigned long long int rand_int;
 
@@ -499,13 +533,12 @@ void EnzoMethodDistributedFeedback::compute_ (Block * block)
 
           soonest_explosion = -1.0;
 
-          // seed random number generator
-          // using function to generate unique number:
-          //     (a,b) = { a*a + a + b, a >= b;
-          //                   a + b*b, a  < b}
-          // where b is batch number (keeps vals smaller... since np > nb usually)
-          //  WARNGING - THIS DOESN'T ACTUALLY WORK SINCE PARTICLES MOVE AROUND
-          srand(( (ip >= ib) ? (ip*ip+ip+ib) : (ip+ib*ib) ));
+
+          // Assign seed for stochastic sampling using unique particle IDs
+          //
+          //  WARNING : This may not work for completley unique IDs if
+          //            number of processors used changes!!!  
+          srand(id[ipid]);
 
           explosion_flag = -1;
           will_explode   =  0;
@@ -539,18 +572,23 @@ void EnzoMethodDistributedFeedback::compute_ (Block * block)
           // Now k-1 is approx Poisson(lambda)
           int number_of_sn = k - 1;
 
-          CkPrintf("xyz - This particle has %i supernova \n",number_of_sn);
-
+#ifdef DEBUG_FEEDBACK
+           CkPrintf("DistributedFeedback (%s) - This particle with m %f and id %d has %d supernova \n",enzo_block->name().c_str(),
+                                                                                   pmass[ipdm], id[ipid],
+                                                                                   number_of_sn);
+#endif
           if (number_of_sn == 0){
             explosion_flag = 0;
             continue;
           } else if (number_of_sn < 0){
             ERROR("EnzoMethodDistributedFeedback",
                   "Number of SN in distributed feedback is negative \n");
-          } else {
-            CkPrintf("xyz - DistributedFeedback ========== Number of SNe %d\n", number_of_sn);
           }
-
+#ifdef DEBUG_FEEDBACK
+          else {
+            CkPrintf("DistributedFeedback (%s) ========== Number of SNe %d\n", enzo_block->name().c_str(), number_of_sn);
+          }
+#endif
           // If there are explosions, we need to check the ionizing luminosity
           // of the progenitor and know whether or not it will explode
           // right now, or at a later time
@@ -569,14 +607,19 @@ void EnzoMethodDistributedFeedback::compute_ (Block * block)
             }
 
             td7 = delay_time*1.0E7;
-            double progenitor_mass = p_mass[0] + pmass[1]*td7 + pmass[2]*td7*td7 +
-                                    p_mass[3]*td7*td7*td7 + p_mass[4]*td7*td7*td7*td7 +
-                                    p_mass[5]*td7*td7*td7*td7*td7 +
-                                    p_mass[6]*td7*td7*td7*td7*td7*td7 +
-                                    p_mass[7]*td7*td7*td7*td7*td7*td7*td7 +
-                                    p_mass[8]*td7*td7*td7*td7*td7*td7*td7*td7 +
-                                    p_mass[9]*td7*td7*td7*td7*td7*td7*td7*td7*td7;
+            double progenitor_mass = poly_mass[0] + pmass[1]*td7 + pmass[2]*td7*td7 +
+                                     poly_mass[3]*td7*td7*td7 + poly_mass[4]*td7*td7*td7*td7 +
+                                     poly_mass[5]*td7*td7*td7*td7*td7 +
+                                     poly_mass[6]*td7*td7*td7*td7*td7*td7 +
+                                     poly_mass[7]*td7*td7*td7*td7*td7*td7*td7 +
+                                     poly_mass[8]*td7*td7*td7*td7*td7*td7*td7*td7 +
+                                     poly_mass[9]*td7*td7*td7*td7*td7*td7*td7*td7*td7;
             progenitor_mass = std::pow(10.0, progenitor_mass); // in Msun
+
+            if (time_first_sn_ > 0.0){
+              // hack for testing
+              progenitor_mass = 20.0;
+            }
 
             delay_time   *=  cello::yr_s / enzo_units->time(); // code units
             star_age = current_time - pcreation[ipdc]; // code units
@@ -585,7 +628,9 @@ void EnzoMethodDistributedFeedback::compute_ (Block * block)
             //      was within a time range and not a one-sided check: ---
             //         MUCH LESS CONFUSED NOW: because fixed random number gen will work
             //                                 if there are unique particle IDs
-            CkPrintf("xyz - DistributedFeedback: %d of %d - delay: %f  age+dt: %g  pm: %g \n", kk+1, number_of_sn, delay_time, star_age, progenitor_mass);
+#ifdef DEBUG_FEEDBACK
+            CkPrintf("DistributedFeedback (%18s): %d of %d - delay: %f  age+dt: %g  pm: %g \n", enzo_block->name().c_str(), kk+1, number_of_sn, delay_time, star_age, progenitor_mass);
+#endif
             // if ( delay_time < star_age + enzo_block->dt  ) {
 
               if (explosion_flag == -1){
@@ -626,9 +671,10 @@ void EnzoMethodDistributedFeedback::compute_ (Block * block)
 
           if (explosion_flag == -1) explosion_flag = 0;
         } // end lifetime check
+#ifdef DEBUG_FEEDBACK
 
-       CkPrintf("xyz - DistributedFeedback ---- Explosion Flag = %d \n", explosion_flag);
-
+       CkPrintf("DistributedFeedback (%s) ---- Explosion Flag = %d \n", enzo_block->name().c_str(), explosion_flag);
+#endif
 
      // ----------------------------------------
      // now compute ejecta mass and stuff from s99
@@ -645,7 +691,8 @@ void EnzoMethodDistributedFeedback::compute_ (Block * block)
         double tsoon7      = soonest_explosion * enzo_units->time() / (1.0E7 * cello::yr_s);
         double wind_energy = 0.0;
         if (time_first_sn_ > 0){
-          wind_energy = 1.0E48; // non zero erg
+          // --- for testing ---
+          wind_energy = 1.0E48 / (8.0 * cello::mass_solar); // non zero erg
         } else{
           wind_energy = s99_wind_energy(td7, tsoon7); // in cm^2/s^2 (i.e. per unit mass in cgs)
         }
@@ -665,7 +712,9 @@ void EnzoMethodDistributedFeedback::compute_ (Block * block)
             sn_metal_fraction = s99_sn_metallicity(td7); // sn metal fraction in fraction (not solar)
           }
           sn_energy = 1.0 * 1.0E51 * explosion_flag;         // sn energy in erg
-          CkPrintf("xyz - DistributedFeedback ---- Explosion!! = %g %g %g \n", sn_mass, sn_energy, sn_metal_fraction);
+#ifdef DEBUG_FEEDBACK
+          CkPrintf("DistributedFeedback (%s) ---- Explosion!! = %g %g %g \n", enzo_block->name().c_str(), sn_mass, sn_energy, sn_metal_fraction);
+#endif
         }
 
         double m_eject = wind_mass + sn_mass;          // total mass in Msun
@@ -716,11 +765,23 @@ void EnzoMethodDistributedFeedback::compute_ (Block * block)
       } // end loop over particles
     } // end loop over batches
 
+#ifdef DEBUG_FEEDBACK
     if (count > 0){
-      CkPrintf("xyz - Number of feedback particles:   %i \n",count);
+      CkPrintf("DistributedFeedback (%s) - Number of feedback particles:   %i \n",enzo_block->name().c_str(),count);
     }
+#endif
 
+#ifdef DEBUG_FEEDBACK
+    CkPrintf("DistributedFeedback (%s) ------------1------------ Number of local / total particles : %i %i\n",enzo_block->name().c_str(),particle.num_local_particles(it), particle.num_particles(it));
+#endif
+    int delete_count = enzo_block->delete_particle_copies_(it);
+    cello::simulation()->data_delete_particles(delete_count);
+#ifdef DEBUG_FEEDBACK
+    CkPrintf("DistributedFeedback (%s) ------------2------------ Number of local / total particles : %i %i\n",enzo_block->name().c_str(),particle.num_local_particles(it), particle.num_particles(it));
+#endif
   } // end particle check
+
+
 
   return;
 }
@@ -795,22 +856,13 @@ void EnzoMethodDistributedFeedback::add_ionization_feedback(
                        yp - (stencil_rad_ + 1 + 0.5)*hy);
       zpos = std::min(  std::max(zpos, zm + (stencil_rad_ + 1 + 0.5)*hz),
                        zp - (stencil_rad_ + 1 + 0.5)*hz);
+
     }
+
   }
 
   // compute coordinates of central feedback cell
   // this must account for ghost zones
-  // OLD vs new
-/*
-  double xcell = (xpos - xm) / hx + gx;// - 0.5;
-  double ycell = (ypos - ym) / hy + gy;// - 0.5;
-  double zcell = (zpos - zm) / hz + gz;// - 0.5;
-
-  int ix       = ((int) floor(xcell));// + 0.5));
-  int iy       = ((int) floor(ycell));// + 0.5));
-  int iz       = ((int) floor(zcell));// + 0.5));
-
-*/
   double xcell = (xpos - xm) / hx + gx - 0.5;
   double ycell = (ypos - ym) / hy + gy - 0.5;
   double zcell = (zpos - zm) / hz + gz - 0.5;
@@ -819,25 +871,41 @@ void EnzoMethodDistributedFeedback::add_ionization_feedback(
   int iy       = ((int) floor(ycell + 0.5));
   int iz       = ((int) floor(zcell + 0.5));
 
+  // since ionization FB is in particle zone only, skip if particle is
+  // off grid and NOT shifting cell center
+  if (( (ix < 0) || (ix > mx) ||
+        (iy < 0) || (iy > my) ||
+        (iz < 0) || (iz > mz) ) && (!shift_cell_center_)){
+        // particle is off grid!
+        return;
+  }
+
+
   int index =  INDEX(ix,iy,iz,mx,my);
 
   // Case B recombination, assuming T = 10^4 K
   const float alpha = 2.60E-13; // cm^3 / s
 
   // AE: possibly actually compute mu from species fields
-  double ndens = d[index] / enzo_config->ppm_mol_weight / cello::mass_hydrogen;
+  double ndens = d[index] * enzo_units->density() / enzo_config->ppm_mol_weight / cello::mass_hydrogen;
 
   double stromgren_radius = std::pow( (3.0 * s49_tot * 1.0E49) /
                             (4.0 * cello::pi * alpha * ndens*ndens),1.0/3.0);
   double stromgren_volume = (4.0/3.0)*cello::pi*stromgren_radius*stromgren_radius*stromgren_radius;
-
-  double ionized          = cello::kboltz * 1.0E4 / enzo_config->ppm_mol_weight /
+  stromgren_volume        /= (enzo_units->length()*enzo_units->length()*enzo_units->length());
+  double ionized          = cello::kboltz * 1.0E4 / std::min(0.6,enzo_config->ppm_mol_weight) /
                             cello::mass_hydrogen / (enzo_units->length()*enzo_units->length()) *
                             enzo_units->time() * enzo_units->time();
+
 
   if (stromgren_volume <= cell_volume){
     ionized = ionized * stromgren_volume * inv_volume;
   }
+
+#ifdef DEBUG_FEEDBACK
+  CkPrintf("DistributedFeedback (%s): This cell should be getting ionized with radius = %g (pc). volume ratio = %g. will_explode = %i ge = %g ionized = %g\n", enzo_block->name().c_str(), stromgren_radius / cello::pc_cm, stromgren_volume * inv_volume, will_explode, ge[index], ionized);
+#endif
+
 
   if ((will_explode == 1) && (ge[index] < ionized)){
     double diff = ionized - ge[index];
@@ -853,7 +921,7 @@ void EnzoMethodDistributedFeedback::inject_feedback(
                                           double xpos, double ypos, double zpos,
                                           double m_eject,  // in Msun
                                           double E_51, // in 10^51 erg
-                                          double ke_fraction, double metal_fraction, // for now leave as single value
+                                          double ke_f, double metal_fraction, // for now leave as single value
                                           enzo_float pvx,    //default -9999
                                           enzo_float pvy,    //default -9999
                                           enzo_float pvz){   //default -9999
@@ -926,15 +994,18 @@ void EnzoMethodDistributedFeedback::inject_feedback(
   //
   // Set explosion properties
   //
-  double energy_per_cell = E_51 * 1.0E51 / enzo_units->mass() /
-                            (enzo_units->velocity() * enzo_units->velocity());
+  const double energy_units = enzo_units->mass() * enzo_units->velocity() * enzo_units->velocity();
+#ifdef DEBUG_FEEDBACK
+  CkPrintf("Injecting feedback in %i cells at mass (Msun) %g and energy (E51) %g\n",number_of_feedback_cells_, m_eject, E_51);
+#endif
+  double energy_per_cell = E_51 * 1.0E51 / energy_units;
   double mass_per_cell   = m_eject * cello::mass_solar / enzo_units->mass();
+
   mass_per_cell /= ((double) number_of_feedback_cells_);
   energy_per_cell /= ((double) number_of_feedback_cells_);
 
   double density_per_cell = mass_per_cell * inv_vol;
   double energy_density_per_cell = energy_per_cell * inv_vol;
-
 
   //  stencil_rad_ is integer separation from cell center
   //  and edge of injection region (i.e. 1 for 3x3 injection grid)
@@ -954,28 +1025,30 @@ void EnzoMethodDistributedFeedback::inject_feedback(
       zpos = std::min(  std::max(zpos, zm + (stencil_rad_ + 1 + 0.5)*hz),
                        zp - (stencil_rad_ + 1 + 0.5)*hz);
     }
+  }  else {
+    // If using distributed feedback, just do a check to make sure
+    // some FB overlaps, otherwise we can skip this particle entirely
+
+    if ( ((xpos - (stencil_rad_+1)*hx) > xp) ||
+         ((xpos + (stencil_rad_+1)*hx) < xm) ||
+         ((ypos - (stencil_rad_+1)*hy) > yp) ||
+         ((ypos + (stencil_rad_+1)*hy) < ym) ||
+         ((zpos - (stencil_rad_+1)*hz) > zp) ||
+         ((zpos + (stencil_rad_+1)*hz) < zm)    ) {
+
+      return;
+    }
   }
 
   // compute coordinates of central feedback cell
   // this must account for ghost zones
+  double xcell = (xpos - xm) / hx + gx - 0.5;
+  double ycell = (ypos - ym) / hy + gy - 0.5;
+  double zcell = (zpos - zm) / hz + gz - 0.5;
 
-  // OLD vs NEW
-/*
-  double xcell = (xpos - xm) / hx + gx; //- 0.5;
-  double ycell = (ypos - ym) / hy + gy; //- 0.5;
-  double zcell = (zpos - zm) / hz + gz; //- 0.5;
-
-  int ix       = ((int) floor(xcell)); // + 0.5));
-  int iy       = ((int) floor(ycell)); // + 0.5));
-  int iz       = ((int) floor(zcell)); // + 0.5));
-*/
-double xcell = (xpos - xm) / hx + gx - 0.5;
-double ycell = (ypos - ym) / hy + gy - 0.5;
-double zcell = (zpos - zm) / hz + gz - 0.5;
-
-int ix       = ((int) floor(xcell + 0.5));
-int iy       = ((int) floor(ycell + 0.5));
-int iz       = ((int) floor(zcell + 0.5));
+  int ix       = ((int) floor(xcell + 0.5));
+  int iy       = ((int) floor(ycell + 0.5));
+  int iz       = ((int) floor(zcell + 0.5));
 
 
   double dxc   = ix + 0.5 - (xcell);// - 0.5);
@@ -1013,9 +1086,7 @@ int iz       = ((int) floor(zcell + 0.5));
     ke_before[i] = 0.0; metal_local[i] = 0.0;
   }
 
-  double ke_f = 0.0;
-
-  if (ke_fraction < 0){
+  if (ke_f < 0){
 
     // calculate variable kinetic energy fraction
 
@@ -1024,21 +1095,14 @@ int iz       = ((int) floor(zcell + 0.5));
     for (int k = iz - stencil_rad_; k<= iz + stencil_rad_; k++){
       if ( (k<0) || (k>=mz) ) continue;
       for (int j = iy - stencil_rad_; j <= iy + stencil_rad_; j++){
-        if ( (j<0) || (k>=my) ) continue;
+        if ( (j<0) || (j>=my) ) continue;
         for (int i = ix - stencil_rad_; i <= ix + stencil_rad_; i++){
           if ( (i<0) || (i>=mx)) continue;
 
-//      AE TO DO: Actually calculate number density here with species
+//      TO DO: Actually calculate number density here with species
 
           int index = INDEX(i,j,k,mx,my);
 
-          // NOTE: The presence of these statements throughout this routine
-          //       is to generalize for situations where we don't have to
-          //       kick particles away from grid edges once non-local
-          //       blocks / processors know about particles that deposit
-          //       feedback on their grids (this allows the loops to be
-          //       simple - otherwise will have to continually recalc
-          //       the min / max bounds of the loops to avoid edges )
           if ( (index < 0) || (index >= mx*my*mz)) continue;
 
           double mu_cell  = enzo_config->ppm_mol_weight;
@@ -1086,10 +1150,7 @@ int iz       = ((int) floor(zcell + 0.5));
 
     } // end resolved check
 
-  } else {
-    ke_f = kinetic_fraction_;
-
-  }// end kinetic energy fraction check
+  }
 
   // apply kinetic energy fraction floor
   ke_f = ke_f < 1.0E-10 ? 0.0 : ke_f;
@@ -1244,15 +1305,15 @@ void EnzoMethodDistributedFeedback::convert_momentum(
   zo = (mx * my);
 
   for (int k = -stencil_rad_; k <= stencil_rad_ + 1; k++){
-    if ( (k < 0) || (k >= mz))continue;
+    if ( (k + iz < 0) || (k + iz >= mz))continue;
     for (int j = -stencil_rad_; j <= stencil_rad_ + 1; j++){
-      if ((j<0) || (j >= my)) continue;
+      if (( j + iy <0) || (j + iy >= my)) continue;
       for (int i = -stencil_rad_; i <= stencil_rad_ + 1; i++){
-        if ((i<0) || (i>=mx)) continue;
+        if ((i + ix < 0) || (i + ix >= mx)) continue;
 
-        int index = (ix + i) + ( (iy + j) + (iz + k)*my)*mx;
+        int index = INDEX(i+ix,j+iy,k+iz,mx,my);
 
-        if ( (index < 0) || (index >= mx*my*mz)) continue;
+        if ( (index < 0) || (index >= mx*my*mz)) continue; // redundant
 
         if (idir >= 1){ // velocity -> momentum
 
@@ -1286,13 +1347,13 @@ void EnzoMethodDistributedFeedback::sum_mass_energy(
   sum_mass = 0; sum_energy = 0; sum_ke = 0;
 
   for (int k = -stencil_rad_;  k <= stencil_rad_ + 1; k++){
-    if ((k<0) || (k>=mz)) continue;
+    if ((k+iz<0) || (k+iz>=mz)) continue;
     for (int j = -stencil_rad_; j <= stencil_rad_ + 1; j++){
-      if ((j<0) || (j>=my)) continue;
+      if ((j+iy<0) || (j+iy>=my)) continue;
       for (int i = -stencil_rad_; i <= stencil_rad_ + 1; i++){
-        if ((i<0) || (i>=mx)) continue;
+        if ((i+ix<0) || (i+ix>=mx)) continue;
 
-        int index = (ix + i) + ( (iy + j) + (iz + k)*my)*mx;
+        int index = INDEX(i+ix,j+iy,k+iz,mx,my);
 
         if ( (index < 0) || (index >= mx*my*mz)) continue;
 
@@ -1332,8 +1393,9 @@ void EnzoMethodDistributedFeedback::add_feedback_to_grid(
                                 const double & therm_per_cell, const double & metal_fraction){
 
 
-  CkPrintf("xyz - add_FB_to_grid: %g %g %g %g", mass_per_cell,mom_per_cell,therm_per_cell,metal_fraction);
-
+#ifdef DEBUG_FEEDBACK
+  CkPrintf("xyz - add_FB_to_grid: %g %g %g %g\n", mass_per_cell,mom_per_cell,therm_per_cell,metal_fraction);
+#endif
 
   for (int k = -stencil_rad_; k <= stencil_rad_; k++){
     for (int j = -stencil_rad_; j <= stencil_rad_; j++){
@@ -1364,7 +1426,8 @@ void EnzoMethodDistributedFeedback::add_feedback_to_grid(
 
               double delta_therm = therm_per_cell * dxc1 * dyc1 * dzc1;
 
-              int index = ( ix + i1 ) + ( (iy + j1) + (iz + k1)*my)*mx;
+              int index = INDEX(i1+ix,j1+iy,k1+iz,mx,my);
+
               //CkPrintf("xyz - add_FB_loop: %d %e %e", index, delta_therm, delta_mass);
 
               //if ( (index < 0) || (index >= mx*my*mz)) continue;
@@ -1436,7 +1499,8 @@ void EnzoMethodDistributedFeedback::compute_coefficients(
       for (int i = ix - stencil_rad_ ; i <= ix + stencil_rad_ + 1; i++){
         if ((i<0) || (i>=mx)) {loc_index++; continue;}
 
-        int index = (ix + i) + ( (iy + j) + (iz + k)*my)*mx;
+        // int index = (ix + i) + ( (iy + j) + (iz + k)*my)*mx;
+        int index = INDEX(i,j,k,mx,my);
 
         if ( (index < 0) || (index >= mx*my*mz)){
           loc_index++;

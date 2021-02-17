@@ -169,9 +169,14 @@ public: // interface
       initial_grackle_test_minimum_temperature(10.0),
       initial_grackle_test_reset_energies(0),
 #endif /* CONFIG_USE_GRACKLE */
+
       // EnzoInitialFeedbackTest
       initial_feedback_test_density(),
       initial_feedback_test_star_mass(),
+      initial_feedback_test_temperature(),
+      initial_feedback_test_from_file(),
+      initial_feedback_test_metal_fraction(),
+
       // EnzoInitialInclinedWave
       initial_inclinedwave_alpha(0.0),
       initial_inclinedwave_beta(0.0),
@@ -180,6 +185,7 @@ public: // interface
       initial_inclinedwave_parallel_vel(std::numeric_limits<double>::min()),
       initial_inclinedwave_positive_vel(true),
       initial_inclinedwave_wave_type(""),
+
       // EnzoInitialMusic
       initial_music_field_files(),
       initial_music_field_datasets(),
@@ -289,6 +295,7 @@ public: // interface
       method_feedback_supernova_energy(1.0),
       method_feedback_ejecta_metal_fraction(0.0),
       method_feedback_stencil(3),
+      method_feedback_radius(-1.0),
       method_feedback_shift_cell_center(true),
       method_feedback_ke_fraction(0.0),
       method_feedback_use_ionization_feedback(false),
@@ -491,7 +498,7 @@ public: // attributes
   double                     initial_inclinedwave_parallel_vel;
   bool                       initial_inclinedwave_positive_vel;
   std::string                initial_inclinedwave_wave_type;
-  
+
   /// EnzoInitialMusic
 
   std::vector < std::string > initial_music_field_files;
@@ -575,6 +582,9 @@ public: // attributes
   double                     initial_feedback_test_position[3];
   double                     initial_feedback_test_density;
   double                     initial_feedback_test_star_mass;
+  double                     initial_feedback_test_temperature;
+  bool                       initial_feedback_test_from_file;
+  double                     initial_feedback_test_metal_fraction;
 
   /// EnzoInitialIsolatedGalaxy
   double                     initial_IG_center_position[3];
@@ -607,7 +617,7 @@ public: // attributes
 
   /// EnzoMethodCheckGravity
   std::string                method_check_gravity_particle_type;
-  
+
   /// EnzoMethodHeat
   double                     method_heat_alpha;
 
@@ -629,6 +639,7 @@ public: // attributes
   double                    method_feedback_ke_fraction;
   double                    method_feedback_time_first_sn;
   int                       method_feedback_stencil;
+  double                    method_feedback_radius;
   bool                      method_feedback_shift_cell_center;
   bool                      method_feedback_use_ionization_feedback;
 
@@ -713,7 +724,7 @@ public: // attributes
 
   std::string                prolong_enzo_type;
   bool                       prolong_enzo_positive;
-  
+
   ///==============
   /// EnzoSolverMg0
   ///==============

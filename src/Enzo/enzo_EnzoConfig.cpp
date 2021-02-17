@@ -83,9 +83,11 @@ EnzoConfig::EnzoConfig() throw ()
   initial_grackle_test_reset_energies(0),
 #endif /* CONFIG_USE_GRACKLE */
 
-  // EnzoInitialFeedbackTest
   initial_feedback_test_density(),
   initial_feedback_test_star_mass(),
+  initial_feedback_test_temperature(),
+  initial_feedback_test_from_file(),
+  initial_feedback_test_metal_fraction(0.01),
 
   // EnzoInitialInclinedWave
   initial_inclinedwave_alpha(0.0),
@@ -204,6 +206,7 @@ EnzoConfig::EnzoConfig() throw ()
   method_feedback_supernova_energy(1.0),
   method_feedback_ejecta_metal_fraction(0.0),
   method_feedback_stencil(3),
+  method_feedback_radius(-1),
   method_feedback_shift_cell_center(true),
   method_feedback_ke_fraction(0.0),
   method_feedback_use_ionization_feedback(false),
@@ -451,7 +454,6 @@ void EnzoConfig::pup (PUP::er &p)
   p | initial_pm_mpp;
   p | initial_pm_level;
 
-
   p | initial_burkertbodenheimer_rank;
   PUParray(p,initial_burkertbodenheimer_array,3);
   p | initial_burkertbodenheimer_radius_relative;
@@ -465,6 +467,9 @@ void EnzoConfig::pup (PUP::er &p)
   PUParray(p, initial_feedback_test_position,3);
   p | initial_feedback_test_density;
   p | initial_feedback_test_star_mass;
+  p | initial_feedback_test_temperature;
+  p | initial_feedback_test_from_file;
+  p | initial_feedback_test_metal_fraction;
 
   PUParray(p, initial_IG_center_position,3);
   PUParray(p, initial_IG_bfield,3);
@@ -491,13 +496,11 @@ void EnzoConfig::pup (PUP::er &p)
   p | initial_IG_recent_SF_SFR;
   p | initial_IG_recent_SF_seed;
 
-
   p | initial_shock_tube_setup_name;
   p | initial_shock_tube_aligned_ax;
   p | initial_shock_tube_axis_velocity;
   p | initial_shock_tube_trans_velocity;
   p | initial_shock_tube_flip_initialize;
-
 
   p | initial_soup_rank;
   p | initial_soup_file;
@@ -530,6 +533,7 @@ void EnzoConfig::pup (PUP::er &p)
   p | method_feedback_supernova_energy;
   p | method_feedback_ejecta_metal_fraction;
   p | method_feedback_stencil;
+  p | method_feedback_radius;
   p | method_feedback_shift_cell_center;
   p | method_feedback_ke_fraction;
   p | method_feedback_use_ionization_feedback;
@@ -607,6 +611,8 @@ void EnzoConfig::pup (PUP::er &p)
   p | units_time;
 
   p  | method_grackle_use_grackle;
+  p  | method_grackle_use_cooling_timestep;
+  p  | method_grackle_radiation_redshift;
 
 #ifdef CONFIG_USE_GRACKLE
   if (method_grackle_use_grackle) {
@@ -777,7 +783,7 @@ void EnzoConfig::read(Parameters * p) throw()
   field_uniform_density = p->value_float ("Field:uniform_density",1.0);
 
   // InitialInclinedWave initialization
-  
+
   initial_inclinedwave_alpha          = p->value_float
     ("Initial:inclined_wave:alpha",0.0);
   initial_inclinedwave_beta           = p->value_float
@@ -860,8 +866,6 @@ void EnzoConfig::read(Parameters * p) throw()
   initial_sedov_random_te_multiplier =
     p->value_integer  ("Initial:sedov_random:te_multiplier",1);
 
-
-
   // Shock Tube Initialization
   initial_shock_tube_setup_name = p->value_string
     ("Initial:shock_tube:setup_name","");
@@ -877,7 +881,7 @@ void EnzoConfig::read(Parameters * p) throw()
   // VL+CT b-field initialization
   initial_bcenter_update_etot = p->value_logical
     ("Initial:vlct_bfield:update_etot",false);
-  
+
   // Cloud Crush Initialization
   initial_cloud_subsample_n     = p->value_integer
     ("Initial:cloud:subsample_n",0);
@@ -925,7 +929,6 @@ void EnzoConfig::read(Parameters * p) throw()
     ERROR("EnzoConfig::read",
 	  "Initial:cloud:uniform_bfield must contain 0 or 3 entries.");
   }
-
 
   // Cosmology initialization
   initial_cosmology_temperature = p->value_float("Initial:cosmology:temperature",0.0);
@@ -1069,6 +1072,15 @@ void EnzoConfig::read(Parameters * p) throw()
   initial_feedback_test_star_mass = p->value_float
     ("Initial:feedback_test:star_mass", 1000.0);
 
+  initial_feedback_test_temperature = p->value_float
+    ("Initial:feedback_test:temperature", 1.0E4);
+
+  initial_feedback_test_from_file = p->value_logical
+    ("Initial:feedback_test:from_file", false);
+
+  initial_feedback_test_metal_fraction = p->value_float
+    ("Initial:feedback_test:metal_fraction", 0.01);
+
   method_check_gravity_particle_type = p->value_string
     ("Method:check_gravity:particle_type","dark");
 
@@ -1108,6 +1120,9 @@ void EnzoConfig::read(Parameters * p) throw()
 
   method_feedback_stencil = p->value_integer
     ("Method:feedback:stencil",3);
+
+  method_feedback_radius = p->value_float
+    ("Method:feedback:radius",-1.0);
 
   method_feedback_shift_cell_center = p->value_logical
     ("Method:feedback:shift_cell_center", true);
@@ -1178,7 +1193,6 @@ void EnzoConfig::read(Parameters * p) throw()
   method_gravity_accumulate = p->value_logical
     ("Method:gravity:accumulate",true);
 
-
   method_background_acceleration_type = p->value_string
    ("Method:background_acceleration:type","unknown");
 
@@ -1228,7 +1242,7 @@ void EnzoConfig::read(Parameters * p) throw()
   for (size_t i=0; i<method_list.size(); i++) {
     if (method_list[i] == "background_acceleration") physics_gravity=true;
   }
-
+  
   method_vlct_riemann_solver = p->value_string
     ("Method:mhd_vlct:riemann_solver","hlld");
   method_vlct_half_dt_reconstruct_method = p->value_string
@@ -1245,7 +1259,6 @@ void EnzoConfig::read(Parameters * p) throw()
     ("Method:mhd_vlct:dual_energy", false);
   method_vlct_dual_energy_eta = p->value_float
     ("Method:mhd_vlct:dual_energy_eta", 0.001);
-
 
   //--------------------------------------------------
   // Physics

@@ -172,8 +172,9 @@ void OutputData::write_block ( const  Block * block ) throw()
 			       strlen(file)+1, file,
 			       strlen(line)+1, line,
 			       count);
+
     
-    // Contribute to DIR.file_list file
+  // Contribute to DIR.file_list file
 
   if (text_block_count_ == 0) {
       

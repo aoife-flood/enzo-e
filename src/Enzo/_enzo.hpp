@@ -11,7 +11,7 @@
 //----------------------------------------------------------------------
 
 #define OMEGA_TOLERANCE 1.0e-5
- 
+
 #ifdef CONFIG_PRECISION_SINGLE
 #   define ETA_TOLERANCE 1.0e-5
 #   define ENZO_HUGE_VAL HUGE_VALF
@@ -114,7 +114,7 @@ enum enzo_sync_id {
   enzo_sync_id_solver_jacobi_2,
   enzo_sync_id_solver_jacobi_3
 };
-  
+
 //----------------------------------------------------------------------
 
 // #include "macros_and_parameters.h"
@@ -175,8 +175,6 @@ extern "C" {
 
 #include "enzo_EnzoUnits.hpp"
 
-// #include "enzo_EnzoPhysicalConstants.hpp"
-
 #include "enzo_EnzoFactory.hpp"
 
 #include "enzo_EnzoSimulation.hpp"
@@ -219,7 +217,6 @@ extern "C" {
 #include "enzo_EnzoRefineParticleMass.hpp"
 #include "enzo_EnzoRefineMass.hpp"
 
-
 #include "enzo_EnzoMethodBackgroundAcceleration.hpp"
 #include "enzo_EnzoEquationOfState.hpp"
 #include "enzo_EnzoEOSIdeal.hpp"
@@ -255,6 +252,7 @@ extern "C" {
 #include "enzo_EnzoMethodStarMaker.hpp"
 #include "enzo_EnzoMethodStarMakerStochasticSF.hpp"
 #include "enzo_EnzoMethodStarMakerSmartStar.hpp"
+
 #include "enzo_EnzoMethodMHDVlct.hpp"
 
 #include "enzo_EnzoMatrixDiagonal.hpp"
@@ -284,4 +282,3 @@ extern "C" {
 #include "enzo_EnzoRestrict.hpp"
 
 #endif /* ENZO_PRIVATE_HPP */
-

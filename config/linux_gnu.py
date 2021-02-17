@@ -16,7 +16,7 @@ flags_arch = '-O3 -g -ffast-math -funroll-loops -fPIC -pedantic'
 #flags_arch = '-Wall -O3 -pg'
 
 # rdynamic required for backtraces
-#flags_link_charm = '-rdynamic' 
+#flags_link_charm = '-rdynamic'
 #flags_link_charm = '-memory paranoid'
 #flags_link_charm = '-fprofile-arcs' # gcov
 

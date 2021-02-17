@@ -159,10 +159,10 @@ if (arch == 'unknown' and "CELLO_ARCH" in os.environ):
 if (prec == 'unknown' and "CELLO_PREC" in os.environ):
      prec = os.environ["CELLO_PREC"]
 
-print 
+print
 print("    CELLO_ARCH scons arch=",arch)
 print("    CELLO_PREC scons prec=",prec)
-print 
+print
 
 #----------------------------------------------------------------------
 # CONFIGURATION DEFINES
@@ -171,8 +171,6 @@ print
 define = {}
 
 # Temporary defines
-
-define_new_ppm = 'NEW_PPM'
 
 # Precision defines
 
@@ -500,7 +498,7 @@ cello_def.write ("#define CELLO_ARCH "
 cello_def.write ("#define CELLO_PREC "
 		"\""+prec+"\"\n")
 cello_def.write ("#define CELLO_CC "
-		"\""+cc+"\"\n")	
+		"\""+cc+"\"\n")
 cello_def.write ("#define CELLO_CFLAGS "
 		"\""+cflags+"\"\n")
 cello_def.write ("#define CELLO_CPPDEFINES "
@@ -508,7 +506,7 @@ cello_def.write ("#define CELLO_CPPDEFINES "
 cello_def.write ("#define CELLO_CPPPATH "
 		"\""+" ".join(map(str,cpppath))+"\"\n")
 cello_def.write ("#define CELLO_CXX "
-		"\""+cxx+"\"\n")	
+		"\""+cxx+"\"\n")
 cello_def.write ("#define CELLO_CXXFLAGS "
 		"\""+cxxflags+"\"\n")
 cello_def.write ("#define CELLO_FORTRANFLAGS "
@@ -535,7 +533,7 @@ cello_def.write ("#define CELLO_TIME "
 #----------
 charm_version = str(subprocess.check_output (["cat", charm_path + "/VERSION"]).rstrip());
 cello_def.write ("#define CHARM_VERSION "+charm_version+"\n" )
-     
+
 fp_charm_version = open ("test/CHARM_VERSION", "w")
 fp_charm_version.write(charm_version + str("\n"));
 fp_charm_version.close()
@@ -547,12 +545,12 @@ cello_def.write ("#define CHARM_PATH \"" + charm_path + "\"\n" )
 #----------
 
 if (have_git):
-      
+
    git_changeset = str(subprocess.check_output(["git", "rev-parse", "HEAD"]).rstrip())
    cello_def.write ("#define CELLO_CHANGESET \""+git_changeset+"\"\n" )
 
 else:
-        
+
    cello_def.write ("#define CELLO_CHANGESET \"unknown\"\n" )
 
 #----------
@@ -594,7 +592,7 @@ if (have_git == 1):
    branch = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD']).rstrip()
 
 build_dir = 'build'
-   
+
 SConscript( 'src/SConscript',variant_dir=build_dir)
 SConscript('test/SConscript')
 

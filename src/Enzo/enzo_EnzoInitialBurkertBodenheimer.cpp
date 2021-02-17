@@ -70,13 +70,15 @@ void EnzoInitialBurkertBodenheimer::enforce_block
 
   const int rank = cello::rank();
 
+  ASSERT("EnzoInitialBurkertBodenheimer::enforce_block",
+         "This problem must be run in 3D.",
+         rank == 3);
+
+
   double hx,hy,hz;
   field.cell_width(bxm,bxp,&hx,
 		   bym,byp,&hy,
 		   bzm,bzp,&hz);
-  if (rank < 2) hy = 0.0;
-  if (rank < 3) hz = 0.0;
-
 
   int gx,gy,gz;
   field.ghost_depth(0,&gx,&gy,&gz);
@@ -192,8 +194,7 @@ void EnzoInitialBurkertBodenheimer::enforce_block
   std::fill_n(ax,m,0.0);
   std::fill_n(vx,m,0.0);
 
-  if (metal) std::fill_n(metal,m,outer_metal_fraction*density);
-
+  if (metal) std::fill_n(metal,m,outer_metal_fraction*(density/density_ratio));
   if (rank >= 2) std::fill_n(ay,m,0.0);
   if (rank >= 2) std::fill_n(vy,m,0.0);
   if (rank >= 3) std::fill_n(az,m,0.0);
@@ -210,7 +211,7 @@ void EnzoInitialBurkertBodenheimer::enforce_block
       for (int kx=kxm; kx<kxp; kx++) {
 	double xc = dxm + hxa*(0.5+kx);
 
-	// (explosion center xc,yc,zc)
+	// (cloud center xc,yc,zc)
 
 	for (int iz=0; iz<mz; iz++) {
 	  double z = bzm + (iz - gz + 0.5)*hz - zc;

@@ -63,13 +63,13 @@
  }
 
   Group {
-    list = ["colour","derived"];
+    list = ["color","derived"];
 
-    colour {
+    color {
       field_list = ["metal_density"]; # needed for proper advection (should get auto flagged as such if not specified here)
     }
     
-    derived { # flag these to ensure they are computed properly on output (*should* work without having to speiciy here)
+    derived { # flag these to ensure they are computed properly on output (*should* work without having to specify here)
       field_list = ["temperature","pressure"];
     }
 
@@ -107,6 +107,7 @@ Particle {
                        "ax", "double",
                        "ay", "double",
                        "az", "double",
+                       "is_local", "double",
                        "mass", "double",
                        "creation_time", "double",
                        "lifetime", "double",

@@ -1,7 +1,7 @@
 
 /// See LICENSE_CELLO file for license and copyright information
 
-/// @file	enzo_EnzoMethodFire2Feedack.cpp
+/// @file	enzo_EnzoMethodFire2Feedback.cpp
 /// @author     Andrew Emerick (aemerick11@gmail.com)
 /// @date
 /// @brief  Implements the FIRE2 model for stellar feedback
@@ -109,13 +109,6 @@ int determineSN(float age, int* nSNII, int* nSNIA,
 
 int determineWinds(float age, float* eWinds, float* mWinds, float* zWinds,
                    float massMsun, float zZsun, float TimeUnits, float dt){
-    /* AJE: Disclaimer!!!
-       The version of this function implemented by Azton matches the rates given
-       in the FIRE2 method paper but does not seem to match up with the rates
-       given in the actual FIRE code... below is the latter, but this might be
-       an issue to use if its non-pubic (unless this is a mistake in the publication?)
-    */
-
 
     // age in Myr
 
@@ -227,7 +220,7 @@ int determineWinds(float age, float* eWinds, float* mWinds, float* zWinds,
 // =============================================================================
 // =============================================================================
 
-EnzoMethodFire2Feedack::EnzoMethodFire2Feedack
+EnzoMethodFire2Feedback::EnzoMethodFire2Feedback
 ()
   : Method()
 {
@@ -250,7 +243,7 @@ EnzoMethodFire2Feedack::EnzoMethodFire2Feedack
   return;
 }
 
-void EnzoMethodFire2Feedack::pup (PUP::er &p)
+void EnzoMethodFire2Feedback::pup (PUP::er &p)
 {
   /// NOTE: Change this function whenever attributes change
 
@@ -264,7 +257,7 @@ void EnzoMethodFire2Feedack::pup (PUP::er &p)
   return;
 }
 
-void EnzoMethodFire2Feedack::compute (Block * block) throw()
+void EnzoMethodFire2Feedback::compute (Block * block) throw()
 {
 
   if (block->is_leaf()){
@@ -514,7 +507,7 @@ void EnzoMethodFire2Feedback::compute_ (Block * block)
 // ----------------------------------------------------------------------------
 
 
-void EnzoMethodFire2Feedack::deposit_feedbak (EnzoBlock * enzo_block,
+void EnzoMethodFire2Feedback::deposit_feedbak (EnzoBlock * enzo_block,
                                               const float ejectaEnergy,
                                               const float ejectaMass,
                                               const float ejectaMetals,
@@ -622,7 +615,7 @@ void EnzoMethodFire2Feedack::deposit_feedbak (EnzoBlock * enzo_block,
       weightsVector[wind] /= weightsSum;
       if (weightsVector[wind] == 0 || isnan(weightsVector[wind]))
       {
-          ERROR("EnzoMethodFire2Feedack: deposit_feedback: NaN weight Vector!")
+          ERROR("EnzoMethodFire2Feedback: deposit_feedback: NaN weight Vector!")
       }
   }
 
@@ -634,7 +627,7 @@ void EnzoMethodFire2Feedack::deposit_feedbak (EnzoBlock * enzo_block,
 
 
 
-double EnzoMethodFire2Feedack::timestep (Block * block) const throw()
+double EnzoMethodFire2Feedback::timestep (Block * block) const throw()
 {
   // In general this is not needed, but could imagine putting timestep
   // limiters in situations where, for example, one would want
