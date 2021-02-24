@@ -25,15 +25,15 @@ EnzoMethodStarMakerSmartStar::EnzoMethodStarMakerSmartStar
   : EnzoMethodStarMaker()
 {
   // To Do: Make the seed an input parameter
-  srand(time(NULL)); // need randum number generator for later
+  //srand(time(NULL)); // need randum number generator for later
   cello::simulation()->new_refresh_set_name(ir_post_,name());
   Refresh * refresh = cello::refresh(ir_post_);
-  CkPrintf("%s:%s:%d: Printing refresh object \n",__FILE__,__FUNCTION__,__LINE__);
-  refresh->print();
+  //CkPrintf("%s:%s:%d: Printing refresh object \n",__FILE__,__FUNCTION__,__LINE__);
+  //refresh->print();
   ParticleDescr * particle_descr = cello::particle_descr();
   refresh->add_particle(particle_descr->type_index("star"));
-  CkPrintf("%s:%s:%d: Printing refresh object \n",__FILE__,__FUNCTION__,__LINE__);
-  refresh->print();
+  //CkPrintf("%s:%s:%d: Printing refresh object \n",__FILE__,__FUNCTION__,__LINE__);
+  //refresh->print();
   return;
 }
 
@@ -83,7 +83,7 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   double ux, uy, uz;
   block->lower(&lx,&ly,&lz);
   block->upper(&ux,&uy,&uz);
-  accretion_radius_cells_ = enzo_config->method_star_maker_accretion_radius_cells;
+  accretion_radius_cells_ = enzo_config->method_accretion_accretion_radius;
   //CkPrintf("Accretion radius cells: %d \n",accretion_radius_cells_);
   // declare particle position arrays
   //  default particle type is "star", but this will default
@@ -123,7 +123,8 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   //CkPrintf("ia_accrate = %d \n",ia_accrate);
   const int ia_accrate_time = particle.attribute_index (it, "accretion_rate_time");
   //CkPrintf("ia_accrate_time = %d \n",ia_accrate_time);
-  const int ia_foo = particle.attribute_index (it, "foo");
+  const int ia_local = particle.attribute_index (it, "is_local");
+  //const int ia_id = particle.attribute_index (it,"id");
   //CkPrintf("ia_foo = %d \n",ia_foo);
   int ib  = 0; // batch counter
   int ipp = 0; // counter
@@ -145,12 +146,14 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   int        * pclass     = 0;
   enzo_float * paccrate = 0;
   enzo_float * paccrate_time = 0;
-
+  int64_t *is_local = 0; 
   
 
   int nb = particle.num_batches(it);
   int ippp;
   int ii;
+
+  const int dlocal = particle.stride(it,ia_local);
   
   CkPrintf("%s: %s: %d: Block name = %s \n",__FILE__,__FUNCTION__,__LINE__,block->name().c_str());
   CkPrintf("%s: %s: %d: Block lower = [%g,%g,%g] \n",__FILE__,__FUNCTION__,__LINE__,lx,ly,lz);
@@ -161,9 +164,11 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
     px = (enzo_float *) particle.attribute_array(it, ia_x, ibb);
     py = (enzo_float *) particle.attribute_array(it, ia_y, ibb);
     pz = (enzo_float *) particle.attribute_array(it, ia_z, ibb);
+    is_local = (int64_t *) particle.attribute_array(it,ia_local,ibb);
     for (ii=0; ii<particle.num_particles(it,ibb); ii++) {
       particle.index(ii, &ibb, &ippp);
-      CkPrintf("%s: %s: %d: Particle %d:  x,y,z = [%g,%g,%g] \n",__FILE__,__FUNCTION__,__LINE__,ii,px[ippp],py[ippp],pz[ippp]);
+      const int ipdlocal = ii * dlocal;
+    CkPrintf("%s: %s: %d: Particle %d:  x,y,z = [%g,%g,%g] , is_local = %i\n",__FILE__,__FUNCTION__,__LINE__,ii,px[ippp],py[ippp],pz[ippp],is_local[ipdlocal]);
     }
   }
   // obtain the particle stride length
@@ -428,6 +433,8 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
           pmetal[io] = metal[i] / density[i];
         }
 
+	is_local = (int64_t *) particle.attribute_array(it,ia_local,ib);
+	is_local[io] = 1; 
         // Remove mass from grid and rescale fraction fields
 	density[i] = jeans_density;
         if (density[i] < 0){

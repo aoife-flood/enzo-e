@@ -252,6 +252,7 @@ extern "C" {
 #include "enzo_EnzoMethodStarMaker.hpp"
 #include "enzo_EnzoMethodStarMakerStochasticSF.hpp"
 #include "enzo_EnzoMethodStarMakerSmartStar.hpp"
+#include "enzo_EnzoMethodMergeStars.hpp"
 
 #include "enzo_EnzoMethodMHDVlct.hpp"
 

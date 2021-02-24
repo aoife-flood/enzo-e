@@ -97,6 +97,10 @@ module enzo {
   PUPable EnzoMethodPpml;
   PUPable EnzoMethodTurbulence;
   PUPable EnzoMethodMHDVlct;
+  PUPable EnzoMethodStarMaker;
+  PUPable EnzoMethodStarMakerStochasticSF;
+  PUPable EnzoMethodStarMakerSmartStar;
+  PUPable EnzoMethodMergeStar;
 
   PUPable EnzoEOSIdeal;
   PUPable EnzoIntegrableUpdate;
@@ -114,10 +118,6 @@ module enzo {
   PUPable EnzoRiemannImpl<HLLImpl<EinfeldtWavespeed<MHDLUT>>>;
   PUPable EnzoRiemannImpl<HLLCImpl>; //EnzoRiemannHLLC
   PUPable EnzoRiemannImpl<HLLDImpl>; //EnzoRiemannHLLD
-
-  PUPable EnzoMethodStarMaker;
-  PUPable EnzoMethodStarMakerStochasticSF;
-  PUPable EnzoMethodStarMakerSmartStar;
 
   PUPable EnzoPhysicsCosmology;
 

@@ -225,9 +225,11 @@ EnzoConfig::EnzoConfig() throw ()
   method_star_maker_minimum_star_mass(1.0E4),    // minimum star particle mass in solar masses
   method_star_maker_maximum_star_mass(1.0E4),    // maximum star particle mass in solar masses
   // EnzoMethodStarMakerSmartStar
-  method_star_maker_accretion_radius_cells(4),   //accretion radius for stars
+  // EnzoMethodMergeStars
+  method_merge_stars_merging_radius(8),   // merging radius must be at least twice accretion radius
   // EnzoMethodAccretion
   method_accretion_prescription(0),              //default to Bondi_Hoyle
+  method_accretion_accretion_radius(4),   //accretion radius for stars
   // EnzoMethodTurbulence
   method_turbulence_edot(0.0),
   method_turbulence_mach_number(0.0),
@@ -552,7 +554,9 @@ void EnzoConfig::pup (PUP::er &p)
   p | method_star_maker_minimum_star_mass;
   p | method_star_maker_maximum_star_mass;
 
-  p | method_star_maker_accretion_radius_cells;
+  p | method_merge_stars_merging_radius;
+  
+  p | method_accretion_accretion_radius;
   p | method_accretion_prescription;
   
   p | method_turbulence_edot;
@@ -1175,8 +1179,11 @@ void EnzoConfig::read(Parameters * p) throw()
   method_null_dt = p->value_float
     ("Method:null:dt",std::numeric_limits<double>::max());
 
-  method_star_maker_accretion_radius_cells = p->value_integer
-    ("Method:star_maker:accretion_radius_cells",4);
+  method_merge_stars_merging_radius = p->value_integer
+    ("Method:merge_stars:merging_radius",8);
+  
+  method_accretion_accretion_radius = p->value_integer
+    ("Method:accretion:accretion_radius",4);
 
   method_accretion_prescription = p->value_integer
     ("Method:accretion:prescription",0);

@@ -313,9 +313,11 @@ public: // interface
       method_star_maker_efficiency(0.01),            // star maker efficiency
       method_star_maker_minimum_star_mass(1.0E4),    // minium star particle mass in solar masses
       method_star_maker_maximum_star_mass(1.0E4),    // maximum star particle mass in solar masses
-      method_star_maker_accretion_radius_cells(4),   //accretion radius in cell widths for stars
+      // EnzoMethodMergeStars
+      method_merge_stars_merging_radius(8),   // merging radius in cell widths
       // EnzoMethodAccretion
       method_accretion_prescription(0),
+      method_accretion_accretion_radius(4),   //accretion radius in cell widths for stars
       // EnzoMethodNull
       method_null_dt(0.0),
       // EnzoMethodTurbulence
@@ -657,10 +659,14 @@ public: // attributes
   double                    method_star_maker_efficiency;
   double                    method_star_maker_minimum_star_mass;
   double                    method_star_maker_maximum_star_mass;
-  int                       method_star_maker_accretion_radius_cells;
+
+  /// EnzoMethodMergeStars
+
+  int                       method_merge_stars_merging_radius;
   /// EnzoMethodAccretion
 
   int                       method_accretion_prescription;
+  int                       method_accretion_accretion_radius;
 
   /// EnzoMethodNull
   double                     method_null_dt;

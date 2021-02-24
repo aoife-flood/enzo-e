@@ -1,3 +1,4 @@
+
 // See LICENSE_CELLO file for license and copyright information
 
 /// @file     enzo_EnzoProblem.cpp
@@ -675,6 +676,10 @@ Method * EnzoProblem::create_method_
     } else{ // does not do anything
       method = new EnzoMethodStarMaker();
     }
+
+  } else if (name == "merge_stars") {
+
+    method = new EnzoMethodMergeStars();
 
   } else if (name == "feedback") {
 
