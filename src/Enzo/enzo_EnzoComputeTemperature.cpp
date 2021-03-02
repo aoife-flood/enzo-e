@@ -90,7 +90,6 @@ void EnzoComputeTemperature::compute_(Block * block,
   Field field = enzo_block->data()->field();
 
   const int in = cello::index_static();
-  CkPrintf("index_static = %d \n",in);
   if (enzo::config()->method_grackle_use_grackle){
 
     CkPrintf("Computing temperature with grackle \n");

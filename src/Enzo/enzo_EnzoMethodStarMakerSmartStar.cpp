@@ -2,6 +2,7 @@
 
 /// @file	enzo_EnzoMethodStarMakerSmartStar.cpp
 /// @author     John Regan (john.regan@mu.ie)
+/// @author     Stefan Arridge (stefan.arridge@gmail.com)
 /// @date
 /// @brief      Functionality to allow for SMS, PopIII, PopII and Black Hole Formation
 ///
@@ -11,30 +12,19 @@
 
 #include "cello.hpp"
 #include "enzo.hpp"
-#include "FofLib.hpp"
 #include <time.h>
 
-int FofList(int, enzo_float *, enzo_float, int *, int **, int ***);
-// #define DEBUG_SF
+#define DEBUG_SMARTSTARS
 #define SCALAR 1
 
 //-------------------------------------------------------------------
 
 EnzoMethodStarMakerSmartStar::EnzoMethodStarMakerSmartStar
 ()
-  : EnzoMethodStarMaker()
+  : EnzoMethodStarMaker() 
 {
-  // To Do: Make the seed an input parameter
-  //srand(time(NULL)); // need randum number generator for later
-  cello::simulation()->new_refresh_set_name(ir_post_,name());
-  Refresh * refresh = cello::refresh(ir_post_);
-  //CkPrintf("%s:%s:%d: Printing refresh object \n",__FILE__,__FUNCTION__,__LINE__);
-  //refresh->print();
-  ParticleDescr * particle_descr = cello::particle_descr();
-  refresh->add_particle(particle_descr->type_index("star"));
-  //CkPrintf("%s:%s:%d: Printing refresh object \n",__FILE__,__FUNCTION__,__LINE__);
-  //refresh->print();
-  return;
+  const EnzoConfig * enzo_config = enzo::config();
+  check_potential_minimum_ = enzo_config->method_smart_stars_check_potential_minimum;
 }
 
 //-------------------------------------------------------------------
@@ -59,20 +49,16 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   // There are a number of star formation criteria that must be
   // fulfilled before star formation is triggered
 
-  int count = 0;
-  //CkPrintf("OK we at least check for smart star formation!\n");
-  
-  // Are we at the highest level?
-  //if (! block->is_leaf()){
-  //  block->compute_done();
-  //  return;
-  //}
+  // TODO: Should check if we are on the maximum refinement level
+  if (! block->is_leaf()){
+    block->compute_done();
+    return;
+  }
 
   EnzoBlock * enzo_block = enzo::block(block);
   const EnzoConfig * enzo_config = enzo::config();
   EnzoUnits * enzo_units = enzo::units();
-
-
+  
   Particle particle = enzo_block->data()->particle();
   Field field = enzo_block->data()->field();
 
@@ -83,53 +69,29 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   double ux, uy, uz;
   block->lower(&lx,&ly,&lz);
   block->upper(&ux,&uy,&uz);
-  accretion_radius_cells_ = enzo_config->method_accretion_accretion_radius;
-  //CkPrintf("Accretion radius cells: %d \n",accretion_radius_cells_);
+
   // declare particle position arrays
   //  default particle type is "star", but this will default
   //  to subclass particle_type
   const int it   = particle.type_index (this->particle_type());
-  //CkPrintf("Particle type index = %d \n",it);
   const int ia_m = particle.attribute_index (it, "mass");
-  //CkPrintf("ia_m = %d \n",ia_m);
   const int ia_pm = particle.attribute_index (it, "prevmass");
-  //CkPrintf("ia_pm = %d \n",ia_pm);
   const int ia_x = particle.attribute_index (it, "x");
-  //CkPrintf("ia_x = %d \n",ia_x);
   const int ia_y = particle.attribute_index (it, "y");
-  //CkPrintf("ia_y = %d \n",ia_y);
   const int ia_z = particle.attribute_index (it, "z");
-  //CkPrintf("ia_z = %d \n",ia_z);
   const int ia_vx = particle.attribute_index (it, "vx");
-  //CkPrintf("ia_vx = %d \n",ia_vx);
   const int ia_vy = particle.attribute_index (it, "vy");
-  //CkPrintf("ia_vy = %d \n",ia_vy);
   const int ia_vz = particle.attribute_index (it, "vz");
-  //CkPrintf("ia_vz = %d \n",ia_vz);
   const int ia_ax = particle.attribute_index(it,"ax");
-  //CkPrintf("ia_ax = %d \n",ia_ax);
-  // additional particle attributes
   const int ia_metal = particle.attribute_index (it, "metal_fraction");
-  //CkPrintf("ia_metal = %d \n",ia_metal);
   const int ia_to    = particle.attribute_index (it, "creation_time");
-  //CkPrintf("ia_to = %d \n",ia_to);
   const int ia_l     = particle.attribute_index (it, "lifetime");
-  //CkPrintf("ia_l = %d \n",ia_l);
   const int ia_timeindex = particle.attribute_index (it, "timeindex");
-  //CkPrintf("ia_timeindex = %d \n",ia_timeindex);
   const int ia_class = particle.attribute_index (it, "class");
-  //CkPrintf("ia_class = %d \n",ia_class);
   const int ia_accrate = particle.attribute_index (it, "accretion_rate");
-  //CkPrintf("ia_accrate = %d \n",ia_accrate);
   const int ia_accrate_time = particle.attribute_index (it, "accretion_rate_time");
-  //CkPrintf("ia_accrate_time = %d \n",ia_accrate_time);
-  const int ia_local = particle.attribute_index (it, "is_local");
-  //const int ia_id = particle.attribute_index (it,"id");
-  //CkPrintf("ia_foo = %d \n",ia_foo);
-  int ib  = 0; // batch counter
-  int ipp = 0; // counter
-  
-  /// pointers for particle attribute arrays (later)
+
+  /// pointers for particle attribute arrays
   enzo_float * pmass = 0;
   enzo_float * prevmass = 0;
   enzo_float * px   = 0;
@@ -138,7 +100,6 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   enzo_float * pvx  = 0;
   enzo_float * pvy  = 0;
   enzo_float * pvz  = 0;
-   ///
   enzo_float * pmetal = 0;
   enzo_float * pform  = 0;
   enzo_float * plifetime = 0;
@@ -146,34 +107,12 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   int        * pclass     = 0;
   enzo_float * paccrate = 0;
   enzo_float * paccrate_time = 0;
-  int64_t *is_local = 0; 
-  
 
-  int nb = particle.num_batches(it);
-  int ippp;
-  int ii;
-
-  const int dlocal = particle.stride(it,ia_local);
-  
-  CkPrintf("%s: %s: %d: Block name = %s \n",__FILE__,__FUNCTION__,__LINE__,block->name().c_str());
-  CkPrintf("%s: %s: %d: Block lower = [%g,%g,%g] \n",__FILE__,__FUNCTION__,__LINE__,lx,ly,lz);
-  CkPrintf("%s: %s: %d: Block upper = [%g,%g,%g] \n",__FILE__,__FUNCTION__,__LINE__,ux,uy,uz);
-  CkPrintf("%s: %s: %d: Number of batches = %d \n",__FILE__,__FUNCTION__,__LINE__,nb);
-  for (int ibb = 0 ; ibb < nb ; ibb++){
-    CkPrintf("%s: %s: %d: Batch %d, Number of particles = %d \n",__FILE__,__FUNCTION__,__LINE__,ibb,particle.num_particles(it,ibb));
-    px = (enzo_float *) particle.attribute_array(it, ia_x, ibb);
-    py = (enzo_float *) particle.attribute_array(it, ia_y, ibb);
-    pz = (enzo_float *) particle.attribute_array(it, ia_z, ibb);
-    is_local = (int64_t *) particle.attribute_array(it,ia_local,ibb);
-    for (ii=0; ii<particle.num_particles(it,ibb); ii++) {
-      particle.index(ii, &ibb, &ippp);
-      const int ipdlocal = ii * dlocal;
-    CkPrintf("%s: %s: %d: Particle %d:  x,y,z = [%g,%g,%g] , is_local = %i\n",__FILE__,__FUNCTION__,__LINE__,ii,px[ippp],py[ippp],pz[ippp],is_local[ipdlocal]);
-    }
-  }
   // obtain the particle stride length
+  // (Not sure if this is right, isn't there a separate stride length for each attribrute?)
   const int ps = particle.stride(it, ia_m);
-
+  int ipp; // Particle index
+  int ib; // Batch index
   int rank = cello::rank();
 
   int gx,gy,gz;
@@ -186,7 +125,7 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   int my = ny + 2*gy;
   int mz = nz + 2*gz;
 
-
+  // get pointers to field values
   enzo_float * density     = (enzo_float *) field.values("density");
   enzo_float * temperature = (enzo_float *) field.values("temperature");
   enzo_float * potential   = (enzo_float *) field.values("potential");
@@ -196,20 +135,9 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
     (enzo_float *)field.values("velocity_y") : NULL;
   enzo_float * velocity_z = (rank >= 3) ?
     (enzo_float *)field.values("velocity_z") : NULL;
-
   enzo_float * metal = field.is_field("metal_density") ?
     (enzo_float *) field.values("metal_density") : NULL;
-
-  const double Zsolar = 0.02;  // TODO: Update to more accurate value
-
-  // Idea for multi-metal species - group these using 'group'
-  // class in IC parameter file and in SF / Feedback routines simply
-  // check if this group exists, and if it does, loop over all of these
-  // fields to assign particle chemical tags and deposit yields
-
-  // compute the temperature (we need it here)
-  // NB: @JR This doesn't give the correct temperature. I need to come
-  // and look at this. 
+  
   EnzoComputeTemperature compute_temperature
     (enzo_config->ppm_density_floor,
      enzo_config->ppm_temperature_floor,
@@ -217,11 +145,8 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
      enzo_config->physics_cosmology);
 
   compute_temperature.compute(enzo_block);
+  int count = 0; // Number of particles formed
   // iterate over all cells (not including ghost zones)
-  //
-  //   To Do: Allow for multi-zone star formation by adding mass in
-  //          surrounding cells if needed to accumulte enough mass
-  //          to hit target star particle mass ()
   for (int iz=gz; iz<nz+gz; iz++){
     for (int iy=gy; iy<ny+gy; iy++){
       for (int ix=gx; ix<nx+gx; ix++){
@@ -233,7 +158,6 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
 	//        double ndens = rho_cgs / mean_particle_mass;
 	double rho_cgs = density[i] * enzo_units->density();
         double mass_in_solar_masses  = density[i] *dx*dy*dz * enzo_units->mass() / cello::mass_solar;
-        double metallicity = (metal) ? metal[i]/density[i]/Zsolar : 0.0;
 	double jeans_density;
         //
         // Apply the criteria for star formation
@@ -244,149 +168,45 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
 	if(! this->check_jeans_density(temperature[i],
 				       dx*enzo_units->length(),
 				       density[i],&jeans_density)) continue;
-	//CkPrintf("First criteria passed!\n");
-	
-	//CkExit(-99);
+
 	// (ii) The second criteria is that the velocity divergence is negative
 	if (! this->check_velocity_divergence(velocity_x, velocity_y,
 					      velocity_z, i,
                                               1, my, my*mz)) continue;
 
-	//CkPrintf("Second criteria passed!\n");
-	//CkExit(-99);
 	//(iii) Is cell the gravitational minimum over a jeans length
 	double cellpos[3];
 	cellpos[0] = lx + (ix - gx + 0.5) * dx;
 	cellpos[1] = ly + (iy - gy + 0.5) * dy;
 	cellpos[2] = lz + (iz - gz + 0.5) * dz;
-	if(! this->check_gravitational_minimum(enzo_block, cellpos, potential[i],
-					       temperature[i],
-					       rho_cgs, enzo_units->length())) continue;
-	//CkPrintf("Final criteria passed!\n");
-	//CkExit(-99);
-	// (iv) 
 	
-#ifdef DONOTCOMPILE
-	    
-	  //if (! this->check_number_density_threshold(ndens)) continue;
-        //if (! this->check_self_gravitating( mean_particle_mass, rho_cgs, temperature[i],
-        //                                    velocity_x, velocity_y, velocity_z,
-        //                                    enzo_units->length(), enzo_units->density(),
-        //                                    i, 1, my, my*mz, dx, dy, dz)) continue;
+	if(! this->check_potential_minimum(enzo_block, cellpos, potential[i],
+					   temperature[i], rho_cgs)) continue;
 
-        // AJE: TO DO ---
-        //      If Grackle is used, check for this and use the H2
-        //      fraction from there instead if h2 is used. Maybe could
-        //      do this in the self shielding factor function
-
-        // Only allow star formation out of the H2 shielding component (if used)
-        const double f_h2 = this->h2_self_shielding_factor(density,
-                                                           metallicity,
-                                                           enzo_units->density(),
-                                                           enzo_units->length(),
-                                                           i, 1, my, my*mz,
-                                                           dx, dy, dz);
-        mass *= f_h2; // apply correction (f_h2 = 1 if not used)
-
-       
-        // Check whether mass in [min_mass, max_range] range and if specified, Jeans unstable
-        //if (! this->check_mass(mass)) continue;
-
-        double tdyn = sqrt(3.0 * cello::pi / 32.0 / cello::grav_constant /
-                      (density[i] * enzo_units->density()));
-
-        //
-        // compute fraction that can / will be converted to stars this step
-        // (just set to efficiency if dynamical time is ignored)
-        //
-        double star_fraction =  this->use_dynamical_time_ ?
-                                std::min(this->efficiency_ * enzo_block->dt * enzo_units->time() / tdyn, 1.0) :
-                                         this->efficiency_ ;
-        // if this is less than the mass of a single particle,
-        // use a random number draw to generate the particle
-	//CkPrintf("star_fraction = %g \n",star_fraction);
-	//CkPrintf("star_particle_min_mass_ = %g \n",this->star_particle_min_mass_);
-	//CkPrintf("star_particle_max_mass_ = %g \n",this->star_particle_max_mass_);
-	//CkPrintf("star_fraction*mass = %g \n",star_fraction*mass);
-        if ( star_fraction * mass < this->star_particle_min_mass_){
-          // get a random number
-          double rnum = (double(rand())) / (double(RAND_MAX));
-          double probability = this->efficiency_ * mass / this->star_particle_min_mass_;
-	  //CkPrintf("rnum = %g, probability = %g \n",rnum,probability);
-          if (rnum > probability){
-	      //CkPrintf("Not forming stars");
-              continue; // do not form stars
-          } else{
-            star_fraction = this->star_particle_min_mass_ / mass;
-          }
-        } else {
-          // else allow the total mass of stars to form to be up to the
-          // maximum particle mass OR the maximum gas->stars conversion fraction.
-          // AJE: Note, this forces there to be at most one particle formed per
-          //      cell per timestep. In principle, this could be bad if
-          //      the computed gas->stars mass (above) is >> than maximum particle
-          //      mass b/c it would artificially extend the lifetime of the SF
-          //      region and presumably increase the amount of SF and burstiness
-          //      of the SF and feedback cycle. Check this!!!!
-
-          if (star_fraction * mass > this->star_particle_max_mass_){
-#ifdef DEBUG_SF
-            CkPrintf( "DEBUG_SF: SmartStar - SF mass = %g ; max particle mass = %g\n",
-                                         star_fraction*mass, this->star_particle_max_mass_);
-#endif
-            star_fraction = this->star_particle_max_mass_ / mass;
-          }
-
-          star_fraction = std::min(star_fraction, this->maximum_star_fraction_);
-        }
-#endif
-        count++; //
+        
 
         // now create a star particle
-        //    insert_particles( particle_type, number_of_particles )
+	count++; 
         int my_particle = particle.insert_particles(it, 1);
-	//CkPrintf("My particle = %d. \t it = %d \n",my_particle,it);
-
-        // For the inserted particle, obtain the batch number (ib)
-        //  and the particle index (ipp)
         particle.index(my_particle, &ib, &ipp);
-	//CkPrintf("ib = %d, ipp = %d\n",ib,ipp);
-
-        int io = ipp; // ipp*ps
-	
-        // pointer to mass array in block
+        int io = ipp; // ipp*ps Stefan: Not sure about this
         pmass = (enzo_float *) particle.attribute_array(it, ia_m, ib);
-	//CkPrintf("ia_m = %d \n",ia_m);
 	prevmass = (enzo_float *) particle.attribute_array(it, ia_pm, ib);
-	//CkPrintf("ia_pm = %d \n",ia_pm);
-	//CkPrintf("prevmass address = %p \n",prevmass);
-	//CkPrintf("prevmass[%d] = %g \n",io,prevmass[io]);
+	// particle mass is mass here
         pmass[io] = (density[i] - jeans_density) * dx * dy * dz;
-	//CkPrintf("io = %d \n",io);
-	//CkPrintf("jeans_density = %g \n",jeans_density);
-	//CkPrintf("Particle mass = %g \n",pmass[io]);
-	////CkPrintf("prevmass address = %s \n",prevmass);
-	//prevmass[io] = (density[i] - jeans_density) * dx * dy * dz;
-	////CkPrintf("prevmass[io] = %g \n",prevmass[io]);
+
+	// set particle position to be at centre of cell
         px = (enzo_float *) particle.attribute_array(it, ia_x, ib);
         py = (enzo_float *) particle.attribute_array(it, ia_y, ib);
         pz = (enzo_float *) particle.attribute_array(it, ia_z, ib);
-	////CkPrintf("px address = %s \n",px);
-	////CkPrintf("py address = %s \n",py);
-	////CkPrintf("pz address = %s \n",pz);
-        // need to double check that these are correctly handling ghost zones
-        //   I believe lx is lower coordinates of active region, but
-        //   ix is integer index of whole grid (active + ghost)
-        //
         px[io] = lx + (ix - gx + 0.5) * dx;
         py[io] = ly + (iy - gy + 0.5) * dy;
         pz[io] = lz + (iz - gz + 0.5) * dz;
-	
 
+	// set particle velocity to be cell velocity
         pvx = (enzo_float *) particle.attribute_array(it, ia_vx, ib);
         pvy = (enzo_float *) particle.attribute_array(it, ia_vy, ib);
         pvz = (enzo_float *) particle.attribute_array(it, ia_vz, ib);
-
         pvx[io] = velocity_x[i];
         if (velocity_y) pvy[io] = velocity_y[i];
         if (velocity_z) pvz[io] = velocity_z[i];
@@ -394,47 +214,42 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
         // finalize attributes
         plifetime = (enzo_float *) particle.attribute_array(it, ia_l, ib);
         pform     = (enzo_float *) particle.attribute_array(it, ia_to, ib);
-	//CkPrintf("ia_l = %d \n",ia_l);
-	//CkPrintf("pform = %d \n",ia_to);
         pform[io]     =  enzo_block->time();   // formation time
-        plifetime[io] =  10.0 * cello::Myr_s / enzo_units->time() ; // lifetime
-
+	// lifetime is hard-coded here, maybe should be a parameter
+        plifetime[io] =  10.0 * cello::Myr_s / enzo_units->time() ;
 	paccrate = (enzo_float *) particle.attribute_array(it, ia_accrate, ib);
-        paccrate_time = (enzo_float *) particle.attribute_array(it, ia_accrate_time, ib);
-	//CkPrintf("ia_accrate = %d \n",ia_accrate);
-	//CkPrintf("ia_accrate_time = %d \n",ia_accrate_time);
+        paccrate_time = (enzo_float *) particle.attribute_array(it, ia_accrate_time,
+								ib);
 	ptimeindex = (int *) particle.attribute_array(it, ia_timeindex, ib);
 	ptimeindex[io] = 0;
 	pclass = (int *) particle.attribute_array(it, ia_class, ib);
 	pclass[io] = SMS;  //see star_type enum in _enzo.hpp
 	*(&paccrate[io]) = 0.0; // I don't count formation as accretion per se
 	*(&paccrate_time[io]) = pform[io];
-	
-	//CkPrintf("it = %d\t ia_accrate = %d\t ib = %d\n", it, ia_accrate, ib);
-	//CkPrintf("offset = 1: accrate + offset  = %p \n", &paccrate[io] + sizeof(enzo_float));
-	//CkPrintf("io = %d: accrate address = %p %p %p\n", io,
-	//	 paccrate, &paccrate[io], &(paccrate[io]));
-	//CkPrintf("%d: accrate address = %p (*accrate = %f)\n", 0, &(paccrate[io]), *(&paccrate[io]));
+
 	/* Starting point of accretion rate pointer for this particle */
 	paccrate = &paccrate[io];
 	paccrate_time = &paccrate_time[io];
 	paccrate += sizeof(enzo_float);
 	paccrate_time += sizeof(enzo_float);
-	//CkPrintf("%d: accrate address = %p (*accrate = %f)\n", 0, paccrate, *paccrate);
+
 	/* Now initialise the array from this offset point onwards */
+	/* I don't think this is necessary. I think we can set attribrutes
+	   to be arrays */
 	for(int k = 1; k < SS_NTIMES; k++, paccrate++, paccrate_time++) {
 	  *paccrate = k;
 	  *paccrate_time = k;
-	  //CkPrintf("%d: accrate address = %p (*accrate = %f)\n", k, paccrate, *paccrate);
-	 
 	}
+	
         if (metal){
           pmetal     = (enzo_float *) particle.attribute_array(it, ia_metal, ib);
           pmetal[io] = metal[i] / density[i];
         }
 
-	is_local = (int64_t *) particle.attribute_array(it,ia_local,ib);
-	is_local[io] = 1; 
+	/* Specify that particle is local to the block */
+	//is_local = (int64_t *) particle.attribute_array(it,ia_local,ib);
+	//is_local[io] = 1;
+	
         // Remove mass from grid and rescale fraction fields
 	density[i] = jeans_density;
         if (density[i] < 0){
@@ -444,146 +259,106 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
                 "Negative densities in star formation");
         }
 
-          // rescale tracer fields to maintain constant mass fraction
-        // with the corresponding new density...
-        //enzo_float scale = density[i] / old_density;
+        /* rescale tracer fields to maintain constant mass fraction
+	   with the corresponding new density... */
         rescale_densities(enzo_block, i, 1.0 - jeans_density/density[i]);
       }
     }
   } // end loop iz
 
+#ifdef DEBUG_SMARTSTARS
   if (count > 0){
-      //CkPrintf("SmartStar: Number of particles formed = %i \n", count);
-      //CkExit(-1);
+    CkPrintf("SmartStars: Number of particles formed on Block %s = %i \n",
+	     block->name().c_str(),count);
   }
+#endif
 
-
-  /* We should now merge particles which come within the mergin radius of each other */
-  /* Particle merging can be disabled by setting SmartStarMerging = False */
-  /* Find mergeable groups using an FOF search */
-
-  // apply accretion depending on particle type
-  // some particles do not accrete.
-  // for now, just do this for all star particles 
-
-  
-  int numparticles = particle.num_particles(it);
-  if(numparticles > 1 && count > 0) {
-    //CkPrintf("numparticles = %d\n", numparticles);
-    int GroupNumberAssignment[numparticles];
-    int *groupsize = NULL;
-    int **grouplist = NULL;
-    bool delete_mask[numparticles];
-    enzo_float ParticleCoordinates[3*numparticles];
-    /* Particles merge once they come within 3 accretion radii of one another */
-    enzo_float MergingRadius = dx*accretion_radius_cells_*3; 
-    px = (enzo_float *) particle.attribute_array(it, ia_x, ib);
-    py = (enzo_float *) particle.attribute_array(it, ia_y, ib);
-    pz = (enzo_float *) particle.attribute_array(it, ia_z, ib);
-    pvx = (enzo_float *) particle.attribute_array(it, ia_vx, ib);
-    pvy = (enzo_float *) particle.attribute_array(it, ia_vy, ib);
-    pvz = (enzo_float *) particle.attribute_array(it, ia_vz, ib);
-    plifetime = (enzo_float *) particle.attribute_array(it, ia_l, ib);
-    pform     = (enzo_float *) particle.attribute_array(it, ia_to, ib);
-    pmetal    = (enzo_float *) particle.attribute_array(it, ia_metal, ib);
-    
-    
-    for (int i=0; i<numparticles; i++) {
-      particle.index(i, &ib, &ipp);
-      int j = i*3;
-      ParticleCoordinates[j]   = px[ipp];
-      ParticleCoordinates[j+1] = py[ipp];
-      ParticleCoordinates[j+2] = pz[ipp];
-      //CkPrintf("ipp = %d\n", ipp);
-      delete_mask[i] = 0;
-    }
-    int ngroups = 0;
-    
-    /* 
-     * Group particles into groups using a FoF algorithm
-     * Need to merge particles in each group
-     * GroupNumberAssignment is an array of size numparticles indexing each group to which 
-     * particle belongs
-     * groupsize is a pointer to an array with size equal to number of groups found. Each element 
-     * gives number of particles in that group. groupsize allocated in routine. 
-     * grouplist is a pointer to an array with size equal to number of groups found. 
-     * Each element of the array is
-     * itself an array listing the indices of all particles in that
-     * group.
-     */
-    ngroups = FofList(numparticles, ParticleCoordinates, MergingRadius, 
-		      GroupNumberAssignment, &groupsize, &grouplist);
-    // for (int i=0; i<numparticles; i++) {
-    //   int j = i*3;
-    //   //CkPrintf("ParticleCoordinates = %e %e %e\n", ParticleCoordinates[j],
-    // 	       ParticleCoordinates[j+1],     ParticleCoordinates[j+2]);
-    //   //CkPrintf("MergingRadius = %e\n", MergingRadius);
-    // }
-    // //CkExit(-1);
-    
-    for(int i = 0; i < ngroups; i++) {
-      if (groupsize[i] != 1) {
-	
-	/* Particle 0 */
-	int ippa = -1;
-	particle.index(grouplist[i][0], &ib, &ippa);
-	//CkPrintf("ippa = %d \n",ippa);
-	//CkPrintf("P0 has mass %f msolar\n", pmass[ippa]/cello::mass_solar);
-	for (int j=1; j < groupsize[i]; j++) {
-	  int ippb = -1;
-	  particle.index(grouplist[i][j], &ib, &ippb);
-
-	  /* Merge everything into first particle in group */
-	  enzo_float ratio1 = pmass[ippa] / (pmass[ippa] + pmass[ippb]);
-	  enzo_float ratio2 = 1.0 - ratio1;
-
-	  px[ippa] = ratio1 * px[ippa] + ratio2 * px[ippb];
-	  py[ippa] = ratio1 * py[ippa] + ratio2 * py[ippb];
-	  pz[ippa] = ratio1 * pz[ippa] + ratio2 * pz[ippb];
-	  pvx[ippa] = ratio1 * pvx[ippa] + ratio2 * pvx[ippb];
-	  pvy[ippa] = ratio1 * pvy[ippa] + ratio2 * pvy[ippb];
-	  pvz[ippa] = ratio1 * pvz[ippa] + ratio2 * pvz[ippb];
-	  plifetime[ippa] = std::min(plifetime[ippa], plifetime[ippb]);
-	  pform[ippa] = std::min(pform[ippa], pform[ippb]);
-	  pmetal[ippa] = ratio1 * pmetal[ippa] + ratio2 * pmetal[ippb];
-	  pmass[ippa] += pmass[ippb];
-	  delete_mask[grouplist[i][j]] = 1;
-	  
-	}
-	CkPrintf("groupsize[%d] = %d.\t Grouplist[%d][0] = %d\t GroupList[%d][1] = %d\n",
-		 i, groupsize[i], i, grouplist[i][0], i, grouplist[i][1]);
-
-      }
-      
-     
-    }
-    //CkExit(-1);
-    /* Delete redundant particles */
-    int numdeleted = particle.delete_particles(it, ib, delete_mask);
-    CkPrintf("FoF: ngroups = %d\n", ngroups);
-    CkPrintf("Number of Particles after merging = %d\n", particle.num_particles(it));
-    CkPrintf("Number of Particles Deleted = %d\n", numdeleted);
-    
-    
-    
-    px = (enzo_float *) particle.attribute_array(it, ia_x, ib);
-    py = (enzo_float *) particle.attribute_array(it, ia_y, ib);
-    pz = (enzo_float *) particle.attribute_array(it, ia_z, ib);
-    for (int i2=0; i2<particle.num_particles(it); i2++) {
-      particle.index(i2, &ib, &ipp);
-      int j2 = i2*3;
-      ParticleCoordinates[j2]   = px[ipp];
-      ParticleCoordinates[j2+1] = py[ipp];
-      ParticleCoordinates[j2+2] = pz[ipp];
-      CkPrintf("After merging, particle %d: x,y,z = %g,%g,%g\n", i2,px[ipp],py[ipp],pz[ipp]);
-    }
-      
-  
-  } 
   block->compute_done();
-
   return;
+} // end compute
+
+
+/*
+ * Compute the gravitational minimum within 1 Jeans length of the cell
+ * In order to pass this test the potential of the local cell
+ * must be at the minimum of the potential.
+ */
+int EnzoMethodStarMakerSmartStar::check_potential_minimum(EnzoBlock * enzo_block,
+						     const double * cellpos,
+						     const double local_potential,
+						     const double temperature,
+						     const double rho_cgs
+)	     
+{
+  
+  if (!check_potential_minimum_)
+    return 1;
+  Field field = enzo_block->data()->field();
+  const EnzoConfig * enzo_config = enzo::config();
+  const EnzoUnits * enzo_units = enzo::units();
+  int gx,gy,gz;
+  field.ghost_depth (0, &gx, &gy, &gz);
+
+  int mx, my, mz;
+  field.dimensions (0, &mx, &my, &mz);
+
+  int nx, ny, nz;
+  field.size ( &nx, &ny, &nz);
+
+  int ngx = nx + 2*gx;
+  int ngy = ny + 2*gy;
+  int ngz = nz + 2*gz;
+  double dx, dy, dz;
+  enzo_block->cell_width(&dx, &dy, &dz);
+  double lx, ly, lz;
+  enzo_block->lower(&lx,&ly,&lz);
+  const double mean_particle_mass = cello::mass_hydrogen*enzo_config->ppm_mol_weight;
+  const double jeans_length = sqrt(gamma_ * cello::kboltz * temperature /
+			      (cello::pi * cello::grav_constant
+			       * mean_particle_mass * rho_cgs)) /
+                                 enzo_units->length();
+  
+  double pot_min = 1e10;
+  enzo_float * g = (enzo_float *) field.values("potential");
+  /*  
+   * Now need to determine the gravitational potential in all 
+   * cells within a jeans_length
+   */
+
+  /* Here we only need to loop over a subset of the cells, 
+     and can break the loop when a value larger than the test
+     value is found. */
+
+  /* ISSUE: Jeans Length can 'extend' beyond the ghost zone */
+
+  /* However, if we check for whether Jeans length is resolved by less 
+     than N cells, and require the ghost depth to be greater than or equal
+     to N, and check this condition after the Jeans density condition,
+     we are fine */
+
+  /* According to Fedderath, we check within a 'control volume' */
+   for (int iz = 0; iz < ngz; iz++){
+      for (int iy = 0; iy < ngy; iy++){
+        for (int ix = 0; ix < ngx; ix++){
+          int i = INDEX(ix,iy,iz,ngx,ngy);
+
+	  double posx = lx + (ix - gx + 0.5) * dx;
+	  double posy = ly + (iy - gy + 0.5) * dy;
+	  double posz = lz + (iz - gz + 0.5) * dz;
+	  double dist = sqrt(pow((cellpos[0] - posx), 2.0) +
+			     pow((cellpos[1] - posy), 2.0) +
+			     pow((cellpos[2] - posz), 2.0));
+	  if(dist <= jeans_length) {
+	    if(g[i] < pot_min)
+	      pot_min = g[i];
+	  }
+	}
+      }
+   }
+   return (local_potential <= pot_min);
+   
 }
+
 
   
 /*

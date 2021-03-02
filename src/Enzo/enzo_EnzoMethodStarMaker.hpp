@@ -2,6 +2,7 @@
 
 /// @file	enzo_EnzoMethodStarMaker.hpp
 /// @author     Andrew Emerick (aemerick11@gmail.com)
+/// @author     Stefan Arridge (stefan.arridge@gmail.com)
 /// @date
 /// @brief
 
@@ -95,29 +96,25 @@ protected: // methods
 			  const double dx_cgs,
 			  const double rho,
 			  double * jeans_density);
-  int check_gravitational_minimum(EnzoBlock * enzo_block,
-				  const double * cellpos,
-				  const double cellpotmin,
-				  const double temperature,
-				  const double rho_cgs,
-				  const double lunit);
+ 
 
 protected: // attributes
 
-  bool use_density_threshold_;
-  bool use_velocity_divergence_;
+  bool check_number_density_threshold_;
+  bool check_negative_velocity_divergence_;
+  bool check_negative_definite_strain_tensor_;
+  bool check_jeans_density_;
   bool use_dynamical_time_;
-  bool use_self_gravitating_;
+  bool check_self_gravitating_;
   bool use_h2_self_shielding_;
-  bool use_jeans_mass_;
-  bool use_gravitational_minimum;
+  bool check_jeans_mass_;
+  bool check_gravitational_minimum;
   double number_density_threshold_;
   double efficiency_;
+  double jeans_density_factor_;
   double maximum_star_fraction_;
   double star_particle_min_mass_;
   double star_particle_max_mass_;
-  
-  // variables to be passsed here
   double gamma_;
 };
 

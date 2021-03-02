@@ -259,7 +259,8 @@ void EnzoMethodStarMakerStochasticSF::compute ( Block *block) throw()
 
         id = (int64_t * ) particle.attribute_array(it, ia_id, ib);
 
-        id[io] = CkMyPe() + (ParticleData::id_counter[cello::index_static()]++) * CkNumPes();
+        id[io] = CkMyPe()
+	         + (ParticleData::id_counter[cello::index_static()]++) * CkNumPes();
 
         pmass[io] = star_fraction * (density[i] * dx * dy * dz);
         px = (enzo_float *) particle.attribute_array(it, ia_x, ib);

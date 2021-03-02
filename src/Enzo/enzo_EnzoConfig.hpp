@@ -300,24 +300,29 @@ public: // interface
       method_feedback_ke_fraction(0.0),
       method_feedback_use_ionization_feedback(false),
       method_feedback_time_first_sn(-1.0), // in Myr
-      /// EnzoMethodStarMaker
-      method_star_maker_type(""),
-      method_star_maker_use_density_threshold(true),           // check above density threshold before SF
-      method_star_maker_use_velocity_divergence(true),         // check for converging flow before SF
-      method_star_maker_use_dynamical_time(true),              //
-      method_star_maker_use_self_gravitating(false),           //
+      // EnzoMethodStarMaker
+      method_star_maker_type(""),                        
+      method_star_maker_check_number_density_threshold(false),
+      method_star_maker_check_negative_velocity_divergence(false),
+      method_star_maker_check_negative_definite_strain_tensor(false),
+      method_star_maker_use_dynamical_time(false),
+      method_star_maker_check_self_gravitating(false),            
       method_star_maker_use_h2_self_shielding(false),
-      method_star_maker_use_jeans_mass(false),
-      method_star_maker_number_density_threshold(0.0),      // Number density threshold in cgs
-      method_star_maker_maximum_mass_fraction(0.5),            // maximum cell mass fraction to convert to stars
-      method_star_maker_efficiency(0.01),            // star maker efficiency
-      method_star_maker_minimum_star_mass(1.0E4),    // minium star particle mass in solar masses
-      method_star_maker_maximum_star_mass(1.0E4),    // maximum star particle mass in solar masses
+      method_star_maker_check_jeans_mass(false),
+      method_star_maker_number_density_threshold(0.0),
+      method_star_maker_maximum_mass_fraction(0.5),
+      method_star_maker_efficiency(0.01),
+      method_star_maker_minimum_star_mass(1.0E4),
+      method_star_maker_maximum_star_mass(1.0E4),
+      method_star_maker_check_jeans_density(false),
+      method_star_maker_jeans_density_factor(0.25),
+      // EnzoMethodStarMakerSmartStar
+      method_smart_stars_check_potential_minimum(false),
       // EnzoMethodMergeStars
-      method_merge_stars_merging_radius(8),   // merging radius in cell widths
+      method_merge_stars_merging_radius(8),
       // EnzoMethodAccretion
       method_accretion_prescription(0),
-      method_accretion_accretion_radius(4),   //accretion radius in cell widths for stars
+      method_accretion_accretion_radius(4),
       // EnzoMethodNull
       method_null_dt(0.0),
       // EnzoMethodTurbulence
@@ -648,23 +653,28 @@ public: // attributes
   /// EnzoMethodStarMaker
 
   std::string               method_star_maker_type;
-  bool                      method_star_maker_use_density_threshold;
-  bool                      method_star_maker_use_velocity_divergence;
+  bool                      method_star_maker_check_number_density_threshold;
+  bool                      method_star_maker_check_negative_velocity_divergence;
+  bool                      method_star_maker_check_negative_definite_strain_tensor;
   bool                      method_star_maker_use_dynamical_time;
+  bool                      method_star_maker_check_self_gravitating;
   bool                      method_star_maker_use_h2_self_shielding;
-  bool                      method_star_maker_use_jeans_mass;
-  bool                      method_star_maker_use_self_gravitating;
+  bool                      method_star_maker_check_jeans_mass;
+  bool                      method_star_maker_check_jeans_density;
+  double                    method_star_maker_jeans_density_factor;
   double                    method_star_maker_number_density_threshold;
   double                    method_star_maker_maximum_mass_fraction;
   double                    method_star_maker_efficiency;
   double                    method_star_maker_minimum_star_mass;
   double                    method_star_maker_maximum_star_mass;
 
+  // EnzoMethodStarMakerSmartStar
+  bool                      method_smart_stars_check_potential_minimum;
+  
   /// EnzoMethodMergeStars
-
   int                       method_merge_stars_merging_radius;
+  
   /// EnzoMethodAccretion
-
   int                       method_accretion_prescription;
   int                       method_accretion_accretion_radius;
 

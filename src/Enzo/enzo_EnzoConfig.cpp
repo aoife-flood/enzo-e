@@ -212,24 +212,28 @@ EnzoConfig::EnzoConfig() throw ()
   method_feedback_use_ionization_feedback(false),
   method_feedback_time_first_sn(-1), // in Myr
   // EnzoMethodStarMaker
-  method_star_maker_type(""),                              // star maker type to use
-  method_star_maker_use_density_threshold(true),           // check above density threshold before SF
-  method_star_maker_use_velocity_divergence(true),         // check for converging flow before SF
-  method_star_maker_use_dynamical_time(true),              // compute t_ff / t_dyn. Otherwise take as 1.0
-  method_star_maker_use_self_gravitating(false),            //
+  method_star_maker_type(""),                        
+  method_star_maker_check_number_density_threshold(false),
+  method_star_maker_check_negative_velocity_divergence(false),
+  method_star_maker_check_negative_definite_strain_tensor(false),
+  method_star_maker_use_dynamical_time(false),
+  method_star_maker_check_self_gravitating(false),            
   method_star_maker_use_h2_self_shielding(false),
-  method_star_maker_use_jeans_mass(false),
-  method_star_maker_number_density_threshold(0.0),         // Number density threshold in cgs
-  method_star_maker_maximum_mass_fraction(0.5),            // maximum cell mass fraction to convert to stars
-  method_star_maker_efficiency(0.01),            // star maker efficiency per free fall time
-  method_star_maker_minimum_star_mass(1.0E4),    // minimum star particle mass in solar masses
-  method_star_maker_maximum_star_mass(1.0E4),    // maximum star particle mass in solar masses
+  method_star_maker_check_jeans_mass(false),
+  method_star_maker_number_density_threshold(0.0),
+  method_star_maker_maximum_mass_fraction(0.5),
+  method_star_maker_efficiency(0.01),
+  method_star_maker_minimum_star_mass(1.0E4),
+  method_star_maker_maximum_star_mass(1.0E4),
+  method_star_maker_check_jeans_density(false),
+  method_star_maker_jeans_density_factor(0.25),
   // EnzoMethodStarMakerSmartStar
+  method_smart_stars_check_potential_minimum(false),
   // EnzoMethodMergeStars
-  method_merge_stars_merging_radius(8),   // merging radius must be at least twice accretion radius
+  method_merge_stars_merging_radius(8),
   // EnzoMethodAccretion
-  method_accretion_prescription(0),              //default to Bondi_Hoyle
-  method_accretion_accretion_radius(4),   //accretion radius for stars
+  method_accretion_prescription(0),    
+  method_accretion_accretion_radius(4),
   // EnzoMethodTurbulence
   method_turbulence_edot(0.0),
   method_turbulence_mach_number(0.0),
@@ -542,18 +546,23 @@ void EnzoConfig::pup (PUP::er &p)
   p | method_feedback_time_first_sn;
 
   p | method_star_maker_type;
-  p | method_star_maker_use_density_threshold;
-  p | method_star_maker_use_velocity_divergence;
+  p | method_star_maker_check_number_density_threshold;
+  p | method_star_maker_check_negative_velocity_divergence;
+  p | method_star_maker_check_negative_definite_strain_tensor;
+  p | method_star_maker_check_jeans_density;
+  p | method_star_maker_jeans_density_factor;
   p | method_star_maker_use_dynamical_time;
-  p | method_star_maker_use_self_gravitating;
+  p | method_star_maker_check_self_gravitating;
   p | method_star_maker_use_h2_self_shielding;
-  p | method_star_maker_use_jeans_mass;
+  p | method_star_maker_check_jeans_mass;
   p | method_star_maker_number_density_threshold;
   p | method_star_maker_maximum_mass_fraction;
   p | method_star_maker_efficiency;
   p | method_star_maker_minimum_star_mass;
   p | method_star_maker_maximum_star_mass;
-
+  
+  p | method_smart_stars_check_potential_minimum;
+  
   p | method_merge_stars_merging_radius;
   
   p | method_accretion_accretion_radius;
@@ -1143,23 +1152,26 @@ void EnzoConfig::read(Parameters * p) throw()
   method_star_maker_type = p->value_string
     ("Method:star_maker:type","stochastic");
 
-  method_star_maker_use_density_threshold = p->value_logical
-    ("Method:star_maker:use_density_threshold",true);
+  method_star_maker_check_number_density_threshold = p->value_logical
+    ("Method:star_maker:check_number_density_threshold",false);
 
-  method_star_maker_use_velocity_divergence = p->value_logical
-    ("Method:star_maker:use_velocity_divergence",true);
+  method_star_maker_check_negative_velocity_divergence = p->value_logical
+    ("Method:star_maker:check_negative_velocity_divergence",false);
+
+   method_star_maker_check_negative_definite_strain_tensor = p->value_logical
+    ("Method:star_maker:check_negative_definite_strain_tensor",false);
 
   method_star_maker_use_dynamical_time = p->value_logical
-    ("Method:star_maker:use_dynamical_time",true);
+    ("Method:star_maker:use_dynamical_time",false);
 
-  method_star_maker_use_self_gravitating = p->value_logical
-    ("Method:star_maker:use_self_gravitating", false);
+  method_star_maker_check_self_gravitating = p->value_logical
+    ("Method:star_maker:check_self_gravitating", false);
 
   method_star_maker_use_h2_self_shielding = p->value_logical
     ("Method:star_maker:use_h2_self_shielding", false);
 
-  method_star_maker_use_jeans_mass = p->value_logical
-    ("Method:star_maker:use_jeans_mass", false);
+  method_star_maker_check_jeans_mass = p->value_logical
+    ("Method:star_maker:check_jeans_mass", false);
 
   method_star_maker_number_density_threshold = p->value_float
     ("Method:star_maker:number_density_threshold",0.0);
@@ -1176,6 +1188,15 @@ void EnzoConfig::read(Parameters * p) throw()
   method_star_maker_maximum_star_mass = p->value_float
     ("Method:star_maker:maximum_star_mass",1.0E4);
 
+  method_star_maker_check_jeans_density = p->value_logical
+    ("Method:star_maker:check_jeans_density",false);
+
+  method_star_maker_jeans_density_factor = p->value_float
+    ("Method:star_maker:jeans_density_factor",0.25);
+
+  method_smart_stars_check_potential_minimum = p->value_logical
+    ("Method:star_maker:check_potential_minimum",false);
+  
   method_null_dt = p->value_float
     ("Method:null:dt",std::numeric_limits<double>::max());
 

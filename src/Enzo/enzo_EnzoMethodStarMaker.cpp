@@ -2,6 +2,7 @@
 
 /// @file	enzo_EnzoMethodStarMaker.cpp
 /// @author     Andrew Emerick (aemerick11@gmail.com)
+/// @author     Stefan Arridge (stefan.arridge@gmail.com)
 /// @date
 /// @brief  Implements a star maker class
 ///
@@ -40,20 +41,28 @@ EnzoMethodStarMaker::EnzoMethodStarMaker
   refresh->add_all_fields();
 
   // Copy over parameters from config to local names here for convenience
-  use_density_threshold_     = enzo_config->method_star_maker_use_density_threshold;
-  use_velocity_divergence_   = enzo_config->method_star_maker_use_velocity_divergence;
+  check_number_density_threshold_     =
+    enzo_config->method_star_maker_check_number_density_threshold;
+  check_negative_velocity_divergence_=
+    enzo_config->method_star_maker_check_negative_velocity_divergence;
+  check_negative_definite_strain_tensor_ =
+    enzo_config->method_star_maker_check_negative_definite_strain_tensor;
+  check_jeans_density_ =
+    enzo_config->method_star_maker_check_jeans_density;
+  jeans_density_factor_ =
+    enzo_config->method_star_maker_jeans_density_factor;
   use_dynamical_time_        = enzo_config->method_star_maker_use_dynamical_time;
-  use_self_gravitating_      = enzo_config->method_star_maker_use_self_gravitating;
+  check_self_gravitating_      =
+    enzo_config->method_star_maker_check_self_gravitating;
   use_h2_self_shielding_     = enzo_config->method_star_maker_use_h2_self_shielding;
-  use_jeans_mass_            = enzo_config->method_star_maker_use_jeans_mass;
-  number_density_threshold_  = enzo_config->method_star_maker_number_density_threshold;
+  check_jeans_mass_            = enzo_config->method_star_maker_check_jeans_mass;
+  number_density_threshold_  =
+    enzo_config->method_star_maker_number_density_threshold;
   efficiency_                = enzo_config->method_star_maker_efficiency;
   maximum_star_fraction_     = enzo_config->method_star_maker_maximum_mass_fraction;
   star_particle_min_mass_    = enzo_config->method_star_maker_minimum_star_mass;
   star_particle_max_mass_    = enzo_config->method_star_maker_maximum_star_mass;
-
-  //Creating global gamma here for testing. 
-  gamma_ = 5.0/3.0;
+  gamma_ = enzo_config->field_gamma;
 }
 
 //-------------------------------------------------------------------
@@ -66,17 +75,20 @@ void EnzoMethodStarMaker::pup (PUP::er &p)
 
   Method::pup(p);
 
-  p | use_density_threshold_;
-  p | use_velocity_divergence_;
+  p | check_number_density_threshold_;
+  p | check_jeans_density_;
+  p | jeans_density_factor_;
+  p | check_negative_velocity_divergence_;
+  p | check_negative_definite_strain_tensor_;
   p | use_dynamical_time_;
-  p | number_density_threshold_;
+  p | check_number_density_threshold_;
   p | efficiency_;
   p | maximum_star_fraction_;
   p | star_particle_min_mass_;
   p | star_particle_max_mass_;
-  p | use_self_gravitating_;
+  p | check_self_gravitating_;
   p | use_h2_self_shielding_;
-  p | use_jeans_mass_;
+  p | check_jeans_mass_;
 
   return;
 }
@@ -193,10 +205,10 @@ int EnzoMethodStarMaker::check_number_density_threshold(
                                                         ){
 
   ///  Apply the criteria that the local number density be greater
-  ///  than the provided number density if use_density_threshold_ is
+  ///  than the provided number density if check_density_threshold_ is
   ///  desired by the user.
 
-  return !(this->use_density_threshold_) +
+  return !(this->check_number_density_threshold_) +
           (d >= this->number_density_threshold_);
 }
 
@@ -208,7 +220,7 @@ int EnzoMethodStarMaker::check_self_gravitating(
                 const double dx, const double dy, const double dz)
 {
 
-  if (!this->use_self_gravitating_)
+  if (!this->check_self_gravitating_)
     return 1;
 
   // Hopkins et al. (2013). Virial parameter: alpha < 1 -> self-gravitating
@@ -268,119 +280,37 @@ double EnzoMethodStarMaker::h2_self_shielding_factor(
 }
 
 /*
- * Check if the local cell density exceeds the Jeans Density of that cell
- * Since the Jeans Density is straight forward to compute in CGS
- * we also pass in the local cell density in CGS. 
+ * Check if the local Jeans is sufficiently resolved by the cell width, which
+ * is equivalent to checking if cell density is larger than some threshold
+ * density.
  */
 int EnzoMethodStarMaker::check_jeans_density(const double temperature,
 					     const double dx_cgs,
-					     const double rho,
+					     const double cell_density,
 					     double * jeans_density)
 {
 
-  //if (!this->use_jeans_density_)
-  //return 1;
-  
-  const EnzoConfig * enzo_config = enzo::config();
-  EnzoUnits * enzo_units = enzo::units();
-  //const double JeansDensityConstant = (gamma_*cello::pi*cello::kboltz) /
-  //(enzo_config->ppm_mol_weight*cello::mass_hydrogen*cello::grav_constant);
-  const double J = 0.25; //might later set this to be a free parameter
-  
-  //  const double density_threshold = std::min(jeans_density,
-  //	       this->number_density_threshold_*cello::mass_hydrogen*enzo_config->ppm_mol_weight);
-  //  double temperature_new;
-  //#ifdef SHU_COLLAPSE
-  //temperature_new = 10.0; // for some reason, temperature is incorrect
-  //#else
-  //temperature_new = temperature;
-  //#endif
-  const double sound_speed_squared_cgs = cello::kboltz*temperature/(enzo_config->ppm_mol_weight*cello::mass_hydrogen);
-  *jeans_density = J * J * cello::pi*sound_speed_squared_cgs / (cello::grav_constant * dx_cgs * dx_cgs * enzo_units->density()); //code units
-  
-  return (rho > *jeans_density);
-  
-
-  // if(rho_cgs >= density_threshold) {
-  //   CkPrintf("temperature = %e\t dx_cgs = %e\n", temperature, dx_cgs);
-  //   CkPrintf("jeans_density = %e\t ndens = %e\n",
-  // 	     jeans_density,  this->number_density_threshold_*cello::mass_hydrogen*enzo_config->ppm_mol_weight);
-  
-  //   CkPrintf("density_threshold = %e (%e cc)\t rho_cgs (ndens) = %e (%e)\n",
-  // 	     density_threshold,
-  // 	     density_threshold/(cello::mass_hydrogen*enzo_config->ppm_mol_weight),
-  // 	     rho_cgs,
-  // 	     rho_cgs/(cello::mass_hydrogen*enzo_config->ppm_mol_weight));
-  // }
-}
-
-
-
-/*
- * Compute the gravitational minimum within 1 Jeans length of the cell
- * In order to pass this test the potential of the local cell
- * must be at the minimum of the potential.
- */
-int EnzoMethodStarMaker::check_gravitational_minimum(EnzoBlock * enzo_block,
-						     const double * cellpos,
-						     const double cellpotmin,
-						     const double temperature,
-						     const double rho_cgs,
-						     const double lunit
-)	     
-{
-  
-  if (!use_gravitational_minimum)
+  if (!this->check_jeans_density_)
     return 1;
-  Field field = enzo_block->data()->field();
+  
   const EnzoConfig * enzo_config = enzo::config();
-  int gx,gy,gz;
-  field.ghost_depth (0, &gx, &gy, &gz);
+  const EnzoUnits * enzo_units = enzo::units();
+  const int in = cello::index_static();
 
-  int mx, my, mz;
-  field.dimensions (0, &mx, &my, &mz);
+  // Will need to change this to work with Grackle
+  const double sound_speed_squared_cgs = gamma_* cello::kboltz * temperature /
+                                         (enzo_config->ppm_mol_weight *
+					  cello::mass_hydrogen);
 
-  int nx, ny, nz;
-  field.size ( &nx, &ny, &nz);
-
-  int ngx = nx + 2*gx;
-  int ngy = ny + 2*gy;
-  int ngz = nz + 2*gz;
-  double dx, dy, dz;
-  enzo_block->cell_width(&dx, &dy, &dz);
-  double lx, ly, lz;
-  enzo_block->lower(&lx,&ly,&lz);
-  const double mean_particle_mass = cello::mass_hydrogen*enzo_config->ppm_mol_weight;
-  const double jeans_length = (15.0 * cello::kboltz * temperature /
-	      (4 * cello::pi * cello::grav_constant * mean_particle_mass * rho_cgs))/lunit;
-
-  double pot_min = 1e10;
-  enzo_float * g = (enzo_float *) field.values("potential");
-  /*  
-   * Now need to determine the gravitational potential in all 
-   * cells within a jeans_length
-   */
-   for (int iz = 0; iz < ngz; iz++){
-      for (int iy = 0; iy < ngy; iy++){
-        for (int ix = 0; ix < ngx; ix++){
-          int i = INDEX(ix,iy,iz,ngx,ngy);
-
-	  double posx = lx + (ix - gx + 0.5) * dx;
-	  double posy = ly + (iy - gy + 0.5) * dy;
-	  double posz = lz + (iz - gz + 0.5) * dz;
-	  double dist = sqrt(pow((cellpos[0] - posx), 2.0) +
-			     pow((cellpos[1] - posy), 2.0) +
-			     pow((cellpos[2] - posz), 2.0));
-	  if(dist <= jeans_length) {
-	    if(g[i] < pot_min)
-	      pot_min = g[i];
-	  }
-	}
-      }
-   }
-   return (cellpotmin <= pot_min);
-   
+  *jeans_density  = this->jeans_density_factor_ *
+                    this->jeans_density_factor_ *
+                    cello::pi * sound_speed_squared_cgs /
+                    (cello::grav_constant * dx_cgs * dx_cgs /
+		    enzo_units->density()); //code units
+  
+  return (cell_density > *jeans_density);
 }
+
 
 
  
@@ -389,7 +319,7 @@ int EnzoMethodStarMaker::check_jeans_mass(
   const double rho_cgs, const double mass
 )
 {
-  if (!use_jeans_mass_)
+  if (!check_jeans_mass_)
     return 1;
 
 
@@ -408,7 +338,7 @@ int EnzoMethodStarMaker::check_velocity_divergence(
     ///  Apply the criteria that the divergence of the velocity
     ///  be negative, if so desired by user (use_velocity_divergence).
 
-    if (!(this->use_velocity_divergence_)){
+    if (!(this->check_negative_velocity_divergence_)){
       return 1.0;
     }
 

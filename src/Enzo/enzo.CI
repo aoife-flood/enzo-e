@@ -100,7 +100,7 @@ module enzo {
   PUPable EnzoMethodStarMaker;
   PUPable EnzoMethodStarMakerStochasticSF;
   PUPable EnzoMethodStarMakerSmartStar;
-  PUPable EnzoMethodMergeStar;
+  PUPable EnzoMethodMergeStars;
 
   PUPable EnzoEOSIdeal;
   PUPable EnzoIntegrableUpdate;
