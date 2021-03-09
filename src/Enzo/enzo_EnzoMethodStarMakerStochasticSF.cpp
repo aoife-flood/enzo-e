@@ -194,9 +194,8 @@ void EnzoMethodStarMakerStochasticSF::compute ( Block *block) throw()
                                                            dx, dy, dz);
         mass *= f_h2; // apply correction (f_h2 = 1 if not used)
 
-        if (! this->check_velocity_divergence(velocity_x, velocity_y,
-                                              velocity_z, i,
-                                              1, my, my*mz)) continue;
+        if (!check_converging_flow(velocity_x, velocity_y, velocity_z,
+				   i, 1, my, my*mz,dx,dy,dz)) continue;
         // Check whether mass in [min_mass, max_range] range and if specified, Jeans unstable
         if (! this->check_mass(mass)) continue;
 

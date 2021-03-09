@@ -72,10 +72,11 @@ protected: // methods
   // Routine functions for checking certain conditions
   //
   int check_number_density_threshold(const double &d);
-  int check_velocity_divergence(
+  int check_converging_flow(
                 enzo_float *vx, enzo_float *vy, enzo_float *vz,
                 const int &index, const int &dix, const int &diy,
-                const int &diz);
+                const int &diz, const double &dxm, const double &dy,
+		const double &dz);
   int check_mass(const double &m);
   int check_self_gravitating(
     const double mean_particle_mass, const double rho_cgs,
@@ -96,26 +97,40 @@ protected: // methods
 			  const double dx_cgs,
 			  const double rho,
 			  double * jeans_density);
- 
+
+  int check_potential_minimum(EnzoBlock * enzo_block,
+			      const int ix,
+			      const int iy,
+			      const int iz);
+
+  int check_density_maximum(EnzoBlock * enzo_block,
+			    const int ix, const int iy, const int iz);
 
 protected: // attributes
-
+  
   bool check_number_density_threshold_;
-  bool check_negative_velocity_divergence_;
-  bool check_negative_definite_strain_tensor_;
+  bool check_converging_flow_;
   bool check_jeans_density_;
   bool use_dynamical_time_;
   bool check_self_gravitating_;
   bool use_h2_self_shielding_;
   bool check_jeans_mass_;
-  bool check_gravitational_minimum;
+  bool check_potential_minimum_;
+  bool check_density_maximum_;
+  
   double number_density_threshold_;
   double efficiency_;
   double jeans_density_factor_;
   double maximum_star_fraction_;
   double star_particle_min_mass_;
   double star_particle_max_mass_;
+
+  int control_volume_cells_min_;
+  int control_volume_cells_max_;
+  
   double gamma_;
+  double ggm1_;
+  double grav_constant_internal_units_;
 };
 
 #endif /* EnzoMethodStarMaker */

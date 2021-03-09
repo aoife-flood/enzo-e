@@ -47,17 +47,6 @@ public:
   virtual ~EnzoMethodStarMakerSmartStar() throw() {};
 
 
-protected: //methods
-
-   int check_potential_minimum(EnzoBlock * enzo_block,
-			       const double * cellpos,
-			       const double cellpotmin,
-			       const double temperature,
-			       const double rho_cgs);
-
-protected: //attribrutes
- 
-  bool check_potential_minimum_;
   
 };
 

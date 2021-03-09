@@ -25,9 +25,11 @@ EnzoMethodStarMaker::EnzoMethodStarMaker
 ()
   : Method()
 {
-
+  ASSERT("EnzoMethodStarMaker::EnzoMethodStarMaker()",
+	 "Cannot use star_maker method with rank < 3",cello::rank() == 3);
   const EnzoConfig * enzo_config = enzo::config();
-
+  const EnzoUnits * enzo_units = enzo::units();
+  
   // AJE: This was the old way this was done
   // Initialize default Refresh object
   // const int ir = add_refresh(4,0,neighbor_leaf,sync_barrier,
@@ -41,12 +43,10 @@ EnzoMethodStarMaker::EnzoMethodStarMaker
   refresh->add_all_fields();
 
   // Copy over parameters from config to local names here for convenience
-  check_number_density_threshold_     =
+  check_number_density_threshold_ =
     enzo_config->method_star_maker_check_number_density_threshold;
-  check_negative_velocity_divergence_=
-    enzo_config->method_star_maker_check_negative_velocity_divergence;
-  check_negative_definite_strain_tensor_ =
-    enzo_config->method_star_maker_check_negative_definite_strain_tensor;
+  check_converging_flow_=
+    enzo_config->method_star_maker_check_converging_flow;
   check_jeans_density_ =
     enzo_config->method_star_maker_check_jeans_density;
   jeans_density_factor_ =
@@ -56,6 +56,12 @@ EnzoMethodStarMaker::EnzoMethodStarMaker
     enzo_config->method_star_maker_check_self_gravitating;
   use_h2_self_shielding_     = enzo_config->method_star_maker_use_h2_self_shielding;
   check_jeans_mass_            = enzo_config->method_star_maker_check_jeans_mass;
+  check_potential_minimum_ = enzo_config->method_star_maker_check_potential_minimum;
+  check_density_maximum_ = enzo_config->method_star_maker_check_density_maximum;
+  control_volume_cells_min_ =
+    enzo_config->method_star_maker_control_volume_cells_min;
+  control_volume_cells_max_ =
+    enzo_config->method_star_maker_control_volume_cells_max;
   number_density_threshold_  =
     enzo_config->method_star_maker_number_density_threshold;
   efficiency_                = enzo_config->method_star_maker_efficiency;
@@ -63,6 +69,11 @@ EnzoMethodStarMaker::EnzoMethodStarMaker
   star_particle_min_mass_    = enzo_config->method_star_maker_minimum_star_mass;
   star_particle_max_mass_    = enzo_config->method_star_maker_maximum_star_mass;
   gamma_ = enzo_config->field_gamma;
+  ggm1_ = gamma_ * (gamma_ - 1.0);
+  grav_constant_internal_units_ = cello::grav_constant * enzo_units->mass()
+                                  * enzo_units->time() * enzo_units->time() /
+                                  (enzo_units->length() * enzo_units->length() *
+				   enzo_units->length());
 }
 
 //-------------------------------------------------------------------
@@ -78,10 +89,13 @@ void EnzoMethodStarMaker::pup (PUP::er &p)
   p | check_number_density_threshold_;
   p | check_jeans_density_;
   p | jeans_density_factor_;
-  p | check_negative_velocity_divergence_;
-  p | check_negative_definite_strain_tensor_;
+  p | check_converging_flow_;
   p | use_dynamical_time_;
   p | check_number_density_threshold_;
+  p | check_potential_minimum_;
+  p | check_density_maximum_;
+  p | control_volume_cells_min_;
+  p | control_volume_cells_max_;
   p | efficiency_;
   p | maximum_star_fraction_;
   p | star_particle_min_mass_;
@@ -208,19 +222,20 @@ int EnzoMethodStarMaker::check_number_density_threshold(
   ///  than the provided number density if check_density_threshold_ is
   ///  desired by the user.
 
-  return !(this->check_number_density_threshold_) +
-          (d >= this->number_density_threshold_);
+  return !(check_number_density_threshold_) +
+          (d >= number_density_threshold_);
 }
 
 int EnzoMethodStarMaker::check_self_gravitating(
-                const double mean_particle_mass, const double rho_cgs, const enzo_float temperature,
+                const double mean_particle_mass, const double rho_cgs,
+		const enzo_float temperature,
                 enzo_float *vx, enzo_float *vy, enzo_float *vz,
                 const double lunit, const double vunit,
                 const int &index, const int &dix, const int &diy, const int &diz,
                 const double dx, const double dy, const double dz)
 {
 
-  if (!this->check_self_gravitating_)
+  if (!check_self_gravitating_)
     return 1;
 
   // Hopkins et al. (2013). Virial parameter: alpha < 1 -> self-gravitating
@@ -257,7 +272,7 @@ double EnzoMethodStarMaker::h2_self_shielding_factor(
                 const double dx, const double dy, const double dz)
 {
 
-  if (!this->use_h2_self_shielding_)
+  if (!use_h2_self_shielding_)
     return 1;
 
   // Hopkins et al. (2017) and Krumholz & Gnedin (2011). Constant numbers come from their models and fits.
@@ -280,33 +295,27 @@ double EnzoMethodStarMaker::h2_self_shielding_factor(
 }
 
 /*
- * Check if the local Jeans is sufficiently resolved by the cell width, which
+ * Check if the local Jeans is resolved by 1/jeans_density_factor cell widths, which
  * is equivalent to checking if cell density is larger than some threshold
- * density.
+ * density (see Krumholz+ 2004, ApJ, 611, 399).
+ * Modifies the value of jeans_density
  */
-int EnzoMethodStarMaker::check_jeans_density(const double temperature,
-					     const double dx_cgs,
+int EnzoMethodStarMaker::check_jeans_density(const double specific_internal_energy,
+					     const double mean_cell_width,
 					     const double cell_density,
-					     double * jeans_density)
+					     double* jeans_density)
 {
 
-  if (!this->check_jeans_density_)
+  if (!check_jeans_density_)
     return 1;
-  
-  const EnzoConfig * enzo_config = enzo::config();
+
   const EnzoUnits * enzo_units = enzo::units();
-  const int in = cello::index_static();
+  const double cs2 = ggm1_ * specific_internal_energy;  
 
-  // Will need to change this to work with Grackle
-  const double sound_speed_squared_cgs = gamma_* cello::kboltz * temperature /
-                                         (enzo_config->ppm_mol_weight *
-					  cello::mass_hydrogen);
-
-  *jeans_density  = this->jeans_density_factor_ *
-                    this->jeans_density_factor_ *
-                    cello::pi * sound_speed_squared_cgs /
-                    (cello::grav_constant * dx_cgs * dx_cgs /
-		    enzo_units->density()); //code units
+  *jeans_density  = jeans_density_factor_ * jeans_density_factor_ *
+                    cello::pi * cs2 /
+                    (grav_constant_internal_units_ *
+                    mean_cell_width * mean_cell_width);
   
   return (cell_density > *jeans_density);
 }
@@ -330,34 +339,225 @@ int EnzoMethodStarMaker::check_jeans_mass(
   return (mass < m_jcrit);
 }
 
-int EnzoMethodStarMaker::check_velocity_divergence(
+// This function implements the converging flow condition for star formation.
+// This is done by computing the symmetrised grad velocity tensor (or strain tensor)
+// a_{ij} = 0.5*(dv_i/dx_j + dv_j/dx_i), then first checking its trace is negative
+// (i.e. the velocity divergence is negative), then if this is satisfies we check
+// if all the eigenvalues are negative
+
+int EnzoMethodStarMaker::check_converging_flow(
                 enzo_float *vx, enzo_float *vy, enzo_float *vz,
                 const int &index, const int &dix, const int &diy,
-                const int &diz){
+                const int &diz, const double &dx, const double &dy,
+		const double &dz){
 
-    ///  Apply the criteria that the divergence of the velocity
-    ///  be negative, if so desired by user (use_velocity_divergence).
-
-    if (!(this->check_negative_velocity_divergence_)){
-      return 1.0;
+    if (!check_converging_flow_){
+      return 1;
     }
+    
+    const double a_11 = (vx[index+dix] - vx[index-dix])/dx;
+    const double a_22 = (vy[index+diy] - vy[index-diy])/dy;
+    const double a_33 = (vz[index+diz] - vz[index-diz])/dz;
 
-    int result = 0;
+    /// If trace is positive, at least one of the eigenvalues is
+    /// positive, so cell fails the test
+    
+    if (a_11 + a_22 + a_33 > 0) return 1;
 
-    if(vx){
-      result = (vx[index+dix] - vx[index-dix] < 0) ? 1 : 0;
+    const double a_12 = 0.5 * ( (vx[index+diy] - vx[index-diy]) / dy
+			       +(vy[index+dix] - vy[index-dix]) / dx );
+    const double a_13 = 0.5 * ( (vx[index+diz] - vx[index-diz]) / dz
+			       +(vz[index+dix] - vz[index-dix]) / dx );
+    const double a_23 = 0.5 * ( (vy[index+diz] - vy[index-diz]) / dz
+			       +(vz[index+diy] - vz[index-diy]) / dy );
+
+    // Set the coefficients of the cubic equation which gives the
+    // eigenvalues, i.e. lambda^3 + A*lambda^2 + B*lambda + C = 0
+
+    const double A = -1.0 * (a_11 + a_22 + a_33);
+    const double B = -1.0 * (  a_11 * a_22 + a_11 * a_33
+			     + a_22 * a_33 + a_12 * a_12
+			     + a_23 * a_23 + a_13 * a_13 );
+    const double C = a_11 * a_23 * a_23 + a_22 * a_13 * a_13
+                   + a_33 * a_12 * a_12 - a_11 * a_22 * a_33;
+
+    // Equation can be transformed to the form t^3 + beta*t + gamma = 0
+    // where t = lambda - alpha, with alpha, beta, gamma defined as
+    // follows
+
+    const double alpha = -3.0 * A;
+    const double beta  = B - A * A / 3.0;
+    const double gamma = C + 2.0 * A * A * A / 27.0 - A * B / 3.0;
+
+    /// Can transform this to a trigonometric equation by taking
+    /// t = 2*sqrt(-beta/3) * cos(theta). See
+    /// https://en.wikipedia.org/wiki/Cubic_equation for derivation
+
+    /// We check if any of the eigenvalues are positive
+
+    for (int i = 0; i < 3; i++){
+      const double lambda_k = alpha + 2.0 * sqrt(-1.0 * beta / 3.0) *
+	cos( acos(1.5 * gamma / beta * sqrt(-3.0 / beta)) / 3.0
+	     + i * 2.0 * cello::pi / 3.0);
+      if (lambda_k > 0) return 0;
     }
-
-    if(vy && result){
-      result = (vy[index+diy] - vy[index-diy] < 0) ? 1 : 0;
-    }
-
-    if(vz && result){
-      result = (vz[index+diz] - vz[index-diz] < 0) ? 1 : 0;
-    }
-
-    return result;
+    
+    return 1;
 }
+
+
+/*
+ * This checks whether the given cell is at a potential minimum
+ * within a spherical control volume. The radius of the control volume is the Jeans
+ * length, but bounded below by min_control_volume_radius_ (which must be at least
+ * one cell width) and above by  max_control_volume_radius_ (which must be no greater
+ * than the ghost zone depth). Currently assumes that the spatial resolution is 
+ * the same in each dimension.  
+ */
+
+/*
+ * Bleuler and Teyssier 2014, MNRAS, 445, 4015 have this to say:
+ * '' A local minimum in the gravitational potential is not a pre-requisite 
+ *    for local gravitational collapse. This can be seen in a thought experiment
+ *    where a constant force field is applied to the region of interest. The 
+ *    addition of a constant force term corresponds to adding a linear term in 
+ *    the gravitational potential. This changes the position and/or existence of
+ *    local extrema in the potential without changing the local dynamics. This
+ *    demonstrates why the tidal tensor, which is not affected by the addition of
+ *    a linear term, is the right quantity for the evaluation of local 
+ *    gravitational collapse (see Section 2.2). ''
+*/
+int EnzoMethodStarMaker::check_potential_minimum(
+		       			EnzoBlock * enzo_block,
+			       		const int ix, const int iy, const int iz)
+{
+
+  if (!check_potential_minimum_)
+    return 1;
+  Field field = enzo_block->data()->field();
+  int mx, my, mz;
+  field.dimensions (0, &mx, &my, &mz);
+  double dx, dy, dz;
+  enzo_block->cell_width(&dx, &dy, &dz);
+
+  enzo_float * phi = (enzo_float *) field.values("potential");
+  enzo_float * u = (enzo_float *) field.values("internal_energy");
+  enzo_float * d = (enzo_float *) field.values("density");
+  const int cell_index = INDEX(ix,iy,iz,mx,my);
+  const double jeans_length = sqrt(cello::pi * ggm1_ * u[cell_index] /
+			          (grav_constant_internal_units_ * d[cell_index]));
+  
+  /* The potential field is defined so that it has positive values, so to find
+     the potential 'minimum' we actually find the positive value
+   */
+
+  /* Note: This assumes spatial resolution is the same in all dimensions */
+  const double control_volume_radius = std::min(control_volume_cells_max_ * dx,
+					  std::max(jeans_length,
+					       control_volume_cells_min_ * dx));
+
+  /* Convert this to a number of cells */
+  const int control_volume_cells = floor(control_volume_radius / dx);
+
+  /* We loop over cells within a cube, centred on the 'test cell' with side 
+     length 2 * control_volume_cells. For each cell, we check whether it lies within
+     the control volume, and if so, we check if the potential has a value larger than
+     the local potential, and return 0 if so */
+  int result = 1;
+   for (int jz = iz - control_volume_cells; jz < iz + control_volume_cells; jz++){
+     for (int jy = iy - control_volume_cells; jy < iy + control_volume_cells; jy++){
+       for (int jx = ix - control_volume_cells; jx < ix + control_volume_cells; jx++){
+	 const int j = INDEX(jx,jy,jz,mx,my);
+	  
+	 const double distance2 = dx * dx * (jx - ix) * (jx - ix) +
+	                          dy * dy * (jy - iy) * (jy - iy) +
+	                          dz * dz * (jz - iz) * (jz - iz);
+	  if(distance2 <= control_volume_radius * control_volume_radius) {
+	    if (phi[j] > phi[cell_index]){
+	      result = 0;
+	      break; //break out of the jx loop
+	    }
+	  }
+       } // jx
+       if (!result) break; // break out of the jy loop
+     } // jy
+     if (!result) break; // break out of the jz loop
+   } // jz
+		    
+   return result;
+   
+}
+
+
+
+/*
+ * This checks whether the value of the density in a given cell is at a minimum
+ * within a spherical control volume. The radius of the control volume is the Jeans
+ * length, but bounded below by min_control_volume_radius_ (which must be at least
+ * one cell width) and above by  max_control_volume_radius_ (which must be no greater
+ * than the ghost zone depth). Currently assumes that the spatial resolution is 
+ * the same in each dimension.  
+ */
+
+int EnzoMethodStarMaker::check_density_maximum(
+		       			EnzoBlock * enzo_block,
+			       		const int ix, const int iy, const int iz)
+{
+
+  if (!check_density_maximum_)
+    return 1;
+
+  // Get some data about the fields
+  Field field = enzo_block->data()->field();
+  int mx, my, mz;
+  field.dimensions (0, &mx, &my, &mz);
+  double dx, dy, dz;
+  enzo_block->cell_width(&dx, &dy, &dz);
+  const int cell_index = INDEX(ix,iy,iz,mx,my);
+  
+  // Get pointers to relevant fields
+  enzo_float * u = (enzo_float *) field.values("internal_energy");
+  enzo_float * d = (enzo_float *) field.values("density");
+
+  const double jeans_length = sqrt(cello::pi * ggm1_ * u[cell_index] /
+			          (grav_constant_internal_units_ * d[cell_index]));
+
+  /* Note: This assumes spatial resolution is the same in all dimensions */
+  const double control_volume_radius = std::min(control_volume_cells_max_ * dx,
+					  std::max(jeans_length,
+					       control_volume_cells_min_ * dx));
+
+  /* Convert this to a number of cells */
+  const int control_volume_cells = floor(control_volume_radius / dx);
+
+  int result = 1;
+  /* We loop over cells within a cube, centred on the 'test cell' with side 
+     length 2 * control_volume_cells. For each cell, we check whether it lies within
+     the control volume, and if so, we check if the potential has a value larger than
+     the local potential, and return 0 if so */
+   for (int jz = iz - control_volume_cells; jz < iz + control_volume_cells; jz++){
+     for (int jy = iy - control_volume_cells; jy < iy + control_volume_cells; jy++){
+       for (int jx = ix - control_volume_cells; jx < ix + control_volume_cells; jx++){
+	 const int j = INDEX(jx,jy,jz,mx,my);
+
+	 const double distance2 = dx * dx * (jx - ix) * (jx - ix) +
+	                          dy * dy * (jy - iy) * (jy - iy) +
+	                          dz * dz * (jz - iz) * (jz - iz);
+	  if(distance2 <= control_volume_radius * control_volume_radius) {
+	    if (d[j] > d[cell_index]){
+	      result = 0;
+	      break; // break out of the jx loop
+	    }
+	  }
+       } // jx
+       if (!result) break; // break out of the jy loop
+     } // jy
+     if (!result) break; // break out of the jz loop
+   }
+   return result;
+   
+}
+
 
 int EnzoMethodStarMaker::check_mass(const double &m){
   /// Apply the condition that the mass of gas converted into

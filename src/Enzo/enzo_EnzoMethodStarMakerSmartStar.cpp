@@ -4,7 +4,8 @@
 /// @author     John Regan (john.regan@mu.ie)
 /// @author     Stefan Arridge (stefan.arridge@gmail.com)
 /// @date
-/// @brief      Functionality to allow for SMS, PopIII, PopII and Black Hole Formation
+/// @brief      Functionality to allow for SMS, PopIII, PopII and
+///             Black Hole Formation
 ///
 ///     Derived star maker class that actually makes stars. This is partially
 ///     adapted after the star_maker_ssn method from Enzo and from the active
@@ -23,8 +24,37 @@ EnzoMethodStarMakerSmartStar::EnzoMethodStarMakerSmartStar
 ()
   : EnzoMethodStarMaker() 
 {
+  /// Check we are using sensible parameters
   const EnzoConfig * enzo_config = enzo::config();
-  check_potential_minimum_ = enzo_config->method_smart_stars_check_potential_minimum;
+
+  /// At the moment, can only run with SmartStars in unigrid mode
+  ASSERT("EnzoMethodStarMakerSmartStar::EnzoMethodStarMakerSmartStar()",
+	 "SmartStars requires unigrid mode (Adapt : max_level = 0) since " 
+         "the Jeans length refinement criterion is not yet implemented",
+	 enzo_config->mesh_max_level == 0);
+  
+  ASSERT("EnzoMethodStarMakerSmartStar::EnzoMethodStarMakerSmartStar()",
+	 "control_volume_cells_min_ must be at least 1",
+	 control_volume_cells_min_ > 0);
+  ASSERT("EnzoMethodStarMakerSmartStar::EnzoMethodStarMakerSmartStar()",
+	 "control_volume_cells_max_ must be greater than or equal to "
+	 "control_volume_cells_min_",
+	 control_volume_cells_max_ >= control_volume_cells_min_);
+
+  /// Control volume must lie within ghost zones
+  const int * ghost_depth = enzo_config->field_ghost_depth;
+  const int min_ghost_depth = std::min(ghost_depth[0],
+				       std::min(ghost_depth[1],ghost_depth[2]));
+
+  ASSERT("EnzoMethodStarMakerSmartStar::EnzoMethodStarMakerSmartStar()",
+	 "control_volume_cells_max_ must be less than or equal to the "
+	 "ghost zone depth",
+	 control_volume_cells_max_ <= min_ghost_depth);
+
+  /// We should generalise these checks to the case where we have different
+  /// number of resultion elements in each dimension
+
+
 }
 
 //-------------------------------------------------------------------
@@ -54,7 +84,7 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
     block->compute_done();
     return;
   }
-
+  
   EnzoBlock * enzo_block = enzo::block(block);
   const EnzoConfig * enzo_config = enzo::config();
   EnzoUnits * enzo_units = enzo::units();
@@ -64,13 +94,14 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
 
   double dx, dy, dz;
   block->cell_width(&dx, &dy, &dz);
+  double cell_volume = dx * dy * dz;
+  double mean_cell_width = cbrt(cell_volume);
   
   double lx, ly, lz;
   double ux, uy, uz;
   block->lower(&lx,&ly,&lz);
   block->upper(&ux,&uy,&uz);
 
-  // declare particle position arrays
   //  default particle type is "star", but this will default
   //  to subclass particle_type
   const int it   = particle.type_index (this->particle_type());
@@ -91,7 +122,7 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   const int ia_accrate = particle.attribute_index (it, "accretion_rate");
   const int ia_accrate_time = particle.attribute_index (it, "accretion_rate_time");
 
-  /// pointers for particle attribute arrays
+  /// Initialise pointers for particle attribute arrays
   enzo_float * pmass = 0;
   enzo_float * prevmass = 0;
   enzo_float * px   = 0;
@@ -113,7 +144,6 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   const int ps = particle.stride(it, ia_m);
   int ipp; // Particle index
   int ib; // Batch index
-  int rank = cello::rank();
 
   int gx,gy,gz;
   field.ghost_depth (0, &gx, &gy, &gz);
@@ -127,61 +157,41 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
 
   // get pointers to field values
   enzo_float * density     = (enzo_float *) field.values("density");
-  enzo_float * temperature = (enzo_float *) field.values("temperature");
+  enzo_float * specific_internal_energy =
+    (enzo_float *) field.values("internal_energy");
   enzo_float * potential   = (enzo_float *) field.values("potential");
-  enzo_float * velocity_x = (rank >= 1) ?
-    (enzo_float *)field.values("velocity_x") : NULL;
-  enzo_float * velocity_y = (rank >= 2) ?
-    (enzo_float *)field.values("velocity_y") : NULL;
-  enzo_float * velocity_z = (rank >= 3) ?
-    (enzo_float *)field.values("velocity_z") : NULL;
+  enzo_float * velocity_x  = (enzo_float *) field.values("velocity_x");
+  enzo_float * velocity_y  = (enzo_float *) field.values("velocity_y");
+  enzo_float * velocity_z  = (enzo_float *) field.values("velocity_z");
   enzo_float * metal = field.is_field("metal_density") ?
     (enzo_float *) field.values("metal_density") : NULL;
-  
-  EnzoComputeTemperature compute_temperature
-    (enzo_config->ppm_density_floor,
-     enzo_config->ppm_temperature_floor,
-     enzo_config->ppm_mol_weight,
-     enzo_config->physics_cosmology);
 
-  compute_temperature.compute(enzo_block);
   int count = 0; // Number of particles formed
   // iterate over all cells (not including ghost zones)
   for (int iz=gz; iz<nz+gz; iz++){
     for (int iy=gy; iy<ny+gy; iy++){
       for (int ix=gx; ix<nx+gx; ix++){
 
-        int i = ix + mx*(iy + my*iz);
-
+        int i = INDEX(ix,iy,iz,mx,my);
         // need to compute this better for Grackle fields (on to-do list)
-        double mean_particle_mass = enzo_config->ppm_mol_weight * cello::mass_hydrogen;
-	//        double ndens = rho_cgs / mean_particle_mass;
-	double rho_cgs = density[i] * enzo_units->density();
-        double mass_in_solar_masses  = density[i] *dx*dy*dz * enzo_units->mass() / cello::mass_solar;
-	double jeans_density;
-        //
+
         // Apply the criteria for star formation
-        //
 
-	//(i) The first criteria is that the local gas density must
-	//    exceed the jeans density
-	if(! this->check_jeans_density(temperature[i],
-				       dx*enzo_units->length(),
-				       density[i],&jeans_density)) continue;
-
-	// (ii) The second criteria is that the velocity divergence is negative
-	if (! this->check_velocity_divergence(velocity_x, velocity_y,
-					      velocity_z, i,
-                                              1, my, my*mz)) continue;
-
-	//(iii) Is cell the gravitational minimum over a jeans length
-	double cellpos[3];
-	cellpos[0] = lx + (ix - gx + 0.5) * dx;
-	cellpos[1] = ly + (iy - gy + 0.5) * dy;
-	cellpos[2] = lz + (iz - gz + 0.5) * dz;
+	/*(i) The first criteria is that the local gas density must
+	      exceed the jeans density */
 	
-	if(! this->check_potential_minimum(enzo_block, cellpos, potential[i],
-					   temperature[i], rho_cgs)) continue;
+	double jeans_density;
+	if(!check_jeans_density(specific_internal_energy[i],
+				mean_cell_width,
+				density[i],&jeans_density)) continue;
+
+	// (ii) The second criteria is that the flow is converging
+	if (!check_converging_flow(velocity_x, velocity_y,
+				   velocity_z, i,
+				   1, my, my*mz,dx,dy,dz)) continue;
+
+	//(iii) Is cell the potential minimum within the control volume
+	if (!check_potential_minimum(enzo_block,ix,iy,iz)) continue;
 
         
 
@@ -193,7 +203,7 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
         pmass = (enzo_float *) particle.attribute_array(it, ia_m, ib);
 	prevmass = (enzo_float *) particle.attribute_array(it, ia_pm, ib);
 	// particle mass is mass here
-        pmass[io] = (density[i] - jeans_density) * dx * dy * dz;
+        pmass[io] = (density[i] - jeans_density) * cell_volume;
 
 	// set particle position to be at centre of cell
         px = (enzo_float *) particle.attribute_array(it, ia_x, ib);
@@ -208,8 +218,8 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
         pvy = (enzo_float *) particle.attribute_array(it, ia_vy, ib);
         pvz = (enzo_float *) particle.attribute_array(it, ia_vz, ib);
         pvx[io] = velocity_x[i];
-        if (velocity_y) pvy[io] = velocity_y[i];
-        if (velocity_z) pvz[io] = velocity_z[i];
+        pvy[io] = velocity_y[i];
+        pvz[io] = velocity_z[i];
 
         // finalize attributes
         plifetime = (enzo_float *) particle.attribute_array(it, ia_l, ib);
@@ -234,7 +244,7 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
 	paccrate_time += sizeof(enzo_float);
 
 	/* Now initialise the array from this offset point onwards */
-	/* I don't think this is necessary. I think we can set attribrutes
+	/* STEFAN: I don't think this is necessary. I think we can set attribrutes
 	   to be arrays */
 	for(int k = 1; k < SS_NTIMES; k++, paccrate++, paccrate_time++) {
 	  *paccrate = k;
@@ -254,7 +264,7 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
 	density[i] = jeans_density;
         if (density[i] < 0){
           CkPrintf("Smartstar: density index mass: %g %i %g\n",
-                   density[i],i,mass_in_solar_masses);
+                   density[i],i,density[i]*cell_volume);
           ERROR("EnzoMethodStarMakerSmartStar::compute()",
                 "Negative densities in star formation");
         }
@@ -278,86 +288,6 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
 } // end compute
 
 
-/*
- * Compute the gravitational minimum within 1 Jeans length of the cell
- * In order to pass this test the potential of the local cell
- * must be at the minimum of the potential.
- */
-int EnzoMethodStarMakerSmartStar::check_potential_minimum(EnzoBlock * enzo_block,
-						     const double * cellpos,
-						     const double local_potential,
-						     const double temperature,
-						     const double rho_cgs
-)	     
-{
-  
-  if (!check_potential_minimum_)
-    return 1;
-  Field field = enzo_block->data()->field();
-  const EnzoConfig * enzo_config = enzo::config();
-  const EnzoUnits * enzo_units = enzo::units();
-  int gx,gy,gz;
-  field.ghost_depth (0, &gx, &gy, &gz);
-
-  int mx, my, mz;
-  field.dimensions (0, &mx, &my, &mz);
-
-  int nx, ny, nz;
-  field.size ( &nx, &ny, &nz);
-
-  int ngx = nx + 2*gx;
-  int ngy = ny + 2*gy;
-  int ngz = nz + 2*gz;
-  double dx, dy, dz;
-  enzo_block->cell_width(&dx, &dy, &dz);
-  double lx, ly, lz;
-  enzo_block->lower(&lx,&ly,&lz);
-  const double mean_particle_mass = cello::mass_hydrogen*enzo_config->ppm_mol_weight;
-  const double jeans_length = sqrt(gamma_ * cello::kboltz * temperature /
-			      (cello::pi * cello::grav_constant
-			       * mean_particle_mass * rho_cgs)) /
-                                 enzo_units->length();
-  
-  double pot_min = 1e10;
-  enzo_float * g = (enzo_float *) field.values("potential");
-  /*  
-   * Now need to determine the gravitational potential in all 
-   * cells within a jeans_length
-   */
-
-  /* Here we only need to loop over a subset of the cells, 
-     and can break the loop when a value larger than the test
-     value is found. */
-
-  /* ISSUE: Jeans Length can 'extend' beyond the ghost zone */
-
-  /* However, if we check for whether Jeans length is resolved by less 
-     than N cells, and require the ghost depth to be greater than or equal
-     to N, and check this condition after the Jeans density condition,
-     we are fine */
-
-  /* According to Fedderath, we check within a 'control volume' */
-   for (int iz = 0; iz < ngz; iz++){
-      for (int iy = 0; iy < ngy; iy++){
-        for (int ix = 0; ix < ngx; ix++){
-          int i = INDEX(ix,iy,iz,ngx,ngy);
-
-	  double posx = lx + (ix - gx + 0.5) * dx;
-	  double posy = ly + (iy - gy + 0.5) * dy;
-	  double posz = lz + (iz - gz + 0.5) * dz;
-	  double dist = sqrt(pow((cellpos[0] - posx), 2.0) +
-			     pow((cellpos[1] - posy), 2.0) +
-			     pow((cellpos[2] - posz), 2.0));
-	  if(dist <= jeans_length) {
-	    if(g[i] < pot_min)
-	      pot_min = g[i];
-	  }
-	}
-      }
-   }
-   return (local_potential <= pot_min);
-   
-}
 
 
   

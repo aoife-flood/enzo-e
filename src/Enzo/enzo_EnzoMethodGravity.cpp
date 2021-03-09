@@ -242,9 +242,9 @@ void EnzoMethodGravity::compute_accelerations (EnzoBlock * enzo_block) throw()
   enzo_float * de_t = (enzo_float*) field.values("density_total");
   if (de_t) for (int i=0; i<m; i++) de_t[i] = 0.0;
 
-  if (potential) {
-    for (int i=0; i<m; i++) potential[i] = 0.0;
-  }
+  //  if (potential) {
+  //  for (int i=0; i<m; i++) potential[i] = 0.0;
+  // }
 
 }
 

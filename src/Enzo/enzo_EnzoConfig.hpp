@@ -303,10 +303,11 @@ public: // interface
       // EnzoMethodStarMaker
       method_star_maker_type(""),                        
       method_star_maker_check_number_density_threshold(false),
-      method_star_maker_check_negative_velocity_divergence(false),
-      method_star_maker_check_negative_definite_strain_tensor(false),
+      method_star_maker_check_converging_flow(false),
       method_star_maker_use_dynamical_time(false),
-      method_star_maker_check_self_gravitating(false),            
+      method_star_maker_check_self_gravitating(false),
+      method_star_maker_check_potential_minimum(false),
+      method_star_maker_check_density_maximum(false),
       method_star_maker_use_h2_self_shielding(false),
       method_star_maker_check_jeans_mass(false),
       method_star_maker_number_density_threshold(0.0),
@@ -316,8 +317,9 @@ public: // interface
       method_star_maker_maximum_star_mass(1.0E4),
       method_star_maker_check_jeans_density(false),
       method_star_maker_jeans_density_factor(0.25),
-      // EnzoMethodStarMakerSmartStar
-      method_smart_stars_check_potential_minimum(false),
+      method_star_maker_control_volume_cells_min(1),
+      method_star_maker_control_volume_cells_max(4),
+      
       // EnzoMethodMergeStars
       method_merge_stars_merging_radius(8),
       // EnzoMethodAccretion
@@ -654,13 +656,18 @@ public: // attributes
 
   std::string               method_star_maker_type;
   bool                      method_star_maker_check_number_density_threshold;
-  bool                      method_star_maker_check_negative_velocity_divergence;
-  bool                      method_star_maker_check_negative_definite_strain_tensor;
+  bool                      method_star_maker_check_converging_flow;
   bool                      method_star_maker_use_dynamical_time;
   bool                      method_star_maker_check_self_gravitating;
   bool                      method_star_maker_use_h2_self_shielding;
   bool                      method_star_maker_check_jeans_mass;
   bool                      method_star_maker_check_jeans_density;
+  bool                      method_star_maker_check_potential_minimum;
+  bool                      method_star_maker_check_density_maximum;
+
+  int                       method_star_maker_control_volume_cells_min;
+  int                       method_star_maker_control_volume_cells_max;
+  
   double                    method_star_maker_jeans_density_factor;
   double                    method_star_maker_number_density_threshold;
   double                    method_star_maker_maximum_mass_fraction;
@@ -669,7 +676,7 @@ public: // attributes
   double                    method_star_maker_maximum_star_mass;
 
   // EnzoMethodStarMakerSmartStar
-  bool                      method_smart_stars_check_potential_minimum;
+
   
   /// EnzoMethodMergeStars
   int                       method_merge_stars_merging_radius;
