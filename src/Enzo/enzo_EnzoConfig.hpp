@@ -321,10 +321,10 @@ public: // interface
       method_star_maker_control_volume_cells_max(4),
       
       // EnzoMethodMergeStars
-      method_merge_stars_merging_radius(8),
+      method_merge_stars_merging_radius_cells(8),
       // EnzoMethodAccretion
       method_accretion_prescription(0),
-      method_accretion_accretion_radius(4),
+      method_accretion_kernel_radius_cells(4),
       // EnzoMethodNull
       method_null_dt(0.0),
       // EnzoMethodTurbulence
@@ -679,11 +679,11 @@ public: // attributes
 
   
   /// EnzoMethodMergeStars
-  int                       method_merge_stars_merging_radius;
+  int                       method_merge_stars_merging_radius_cells;
   
   /// EnzoMethodAccretion
   int                       method_accretion_prescription;
-  int                       method_accretion_accretion_radius;
+  int                       method_accretion_kernel_radius_cells;
 
   /// EnzoMethodNull
   double                     method_null_dt;

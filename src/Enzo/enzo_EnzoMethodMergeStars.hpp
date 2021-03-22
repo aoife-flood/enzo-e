@@ -47,10 +47,30 @@ public:
   // Compute the maximum timestep for this method
   virtual double timestep ( Block * block) const throw();
 
+protected: // methods
+
+  void compute_(Block * block);
+
+  bool any_local_particles_(EnzoBlock * enzo_block,int it);
+
+  void get_particle_coordinates_block_units_
+                                (EnzoBlock * enzo_block, int it,
+                                double * particle_coordinates_block_units,
+                                double * merging_radius_block_units);
+
+  bool particles_in_neighbouring_blocks_(double * particle_coordinates,
+					int ** group_lists,int * group_sizes,
+					int i);
+  bool particle_in_block_(int i,  EnzoBlock * enzo_block, int it);
+
+  double nearest_periodic_image_(double x, double y, double dm, double dp,
+				 int periodic);
+
+  double fold_position_(double x, double dm, double dp, int periodic);
   
 protected: // attributes
 
-  int merging_radius_;
+  int merging_radius_cells_;
 };
 
 #endif /* EnzoMethodMergeStars */

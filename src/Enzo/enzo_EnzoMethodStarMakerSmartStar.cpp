@@ -15,7 +15,7 @@
 #include "enzo.hpp"
 #include <time.h>
 
-#define DEBUG_SMARTSTARS
+//#define DEBUG_SMARTSTARS
 #define SCALAR 1
 
 //-------------------------------------------------------------------
@@ -31,8 +31,7 @@ EnzoMethodStarMakerSmartStar::EnzoMethodStarMakerSmartStar
   ASSERT("EnzoMethodStarMakerSmartStar::EnzoMethodStarMakerSmartStar()",
 	 "SmartStars requires unigrid mode (Adapt : max_level = 0) since " 
          "the Jeans length refinement criterion is not yet implemented",
-	 enzo_config->mesh_max_level == 0);
-  
+	 enzo_config->mesh_max_level == 0);  
   ASSERT("EnzoMethodStarMakerSmartStar::EnzoMethodStarMakerSmartStar()",
 	 "control_volume_cells_min_ must be at least 1",
 	 control_volume_cells_min_ > 0);
@@ -53,6 +52,8 @@ EnzoMethodStarMakerSmartStar::EnzoMethodStarMakerSmartStar
 
   /// We should generalise these checks to the case where we have different
   /// number of resultion elements in each dimension
+
+  srand(time(NULL)); // need random number generator for later
 
 
 }
@@ -114,14 +115,24 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   const int ia_vy = particle.attribute_index (it, "vy");
   const int ia_vz = particle.attribute_index (it, "vz");
   const int ia_ax = particle.attribute_index(it,"ax");
-  const int ia_metal = particle.attribute_index (it, "metal_fraction");
-  const int ia_to    = particle.attribute_index (it, "creation_time");
+  const int ia_mf = particle.attribute_index (it, "metal_fraction");
+  const int ia_c    = particle.attribute_index (it, "creation_time");
   const int ia_l     = particle.attribute_index (it, "lifetime");
   const int ia_timeindex = particle.attribute_index (it, "timeindex");
   const int ia_class = particle.attribute_index (it, "class");
   const int ia_accrate = particle.attribute_index (it, "accretion_rate");
   const int ia_accrate_time = particle.attribute_index (it, "accretion_rate_time");
+  const int ia_loc = particle.attribute_index (it, "is_local");
 
+       // Attribrute stride lengths
+  const int dm   = particle.stride(it, ia_m);
+  const int dp   = particle.stride(it, ia_x);
+  const int dv   = particle.stride(it, ia_vx);
+  const int dl   = particle.stride(it, ia_l);
+  const int dc   = particle.stride(it, ia_c);
+  const int dmf  = particle.stride(it, ia_mf);
+  const int dloc = particle.stride(it, ia_loc);
+  
   /// Initialise pointers for particle attribute arrays
   enzo_float * pmass = 0;
   enzo_float * prevmass = 0;
@@ -132,12 +143,13 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   enzo_float * pvy  = 0;
   enzo_float * pvz  = 0;
   enzo_float * pmetal = 0;
-  enzo_float * pform  = 0;
+  enzo_float * pcreation  = 0;
   enzo_float * plifetime = 0;
   int        * ptimeindex = 0;
   int        * pclass     = 0;
   enzo_float * paccrate = 0;
   enzo_float * paccrate_time = 0;
+  int64_t * is_local = 0;
 
   // obtain the particle stride length
   // (Not sure if this is right, isn't there a separate stride length for each attribrute?)
@@ -190,8 +202,8 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
 				   velocity_z, i,
 				   1, my, my*mz,dx,dy,dz)) continue;
 
-	//(iii) Is cell the potential minimum within the control volume
-	if (!check_potential_minimum(enzo_block,ix,iy,iz)) continue;
+	//(iii) Is cell the density maximum within the control volume
+	if (!check_density_maximum(enzo_block,ix,iy,iz)) continue;
 
         
 
@@ -199,66 +211,72 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
 	count++; 
         int my_particle = particle.insert_particles(it, 1);
         particle.index(my_particle, &ib, &ipp);
-        int io = ipp; // ipp*ps Stefan: Not sure about this
+        //int io = ipp; // ipp*ps Stefan: Not sure about this
         pmass = (enzo_float *) particle.attribute_array(it, ia_m, ib);
 	prevmass = (enzo_float *) particle.attribute_array(it, ia_pm, ib);
 	// particle mass is mass here
-        pmass[io] = (density[i] - jeans_density) * cell_volume;
+        pmass[ipp * dm] = (density[i] - jeans_density) * cell_volume;
 
-	// set particle position to be at centre of cell
+	// set particle position to be at centre of cell, plus some
+	// randomness
         px = (enzo_float *) particle.attribute_array(it, ia_x, ib);
         py = (enzo_float *) particle.attribute_array(it, ia_y, ib);
         pz = (enzo_float *) particle.attribute_array(it, ia_z, ib);
-        px[io] = lx + (ix - gx + 0.5) * dx;
-        py[io] = ly + (iy - gy + 0.5) * dy;
-        pz[io] = lz + (iz - gz + 0.5) * dz;
+
+	// generate random numbers from uniform distribution between 0 and 1
+	double rnum1 = (double(rand())) / (double(RAND_MAX));
+	double rnum2 = (double(rand())) / (double(RAND_MAX));
+	double rnum3 = (double(rand())) / (double(RAND_MAX));
+        px[ipp * dp] = lx + (ix - gx + 0.5) * dx + 0.1 * (rnum1-0.5) * dx;
+        py[ipp * dp] = ly + (iy - gy + 0.5) * dy + 0.1 * (rnum2-0.5) * dy;
+        pz[ipp * dp] = lz + (iz - gz + 0.5) * dz + 0.1 * (rnum3-0.5) * dz;
 
 	// set particle velocity to be cell velocity
         pvx = (enzo_float *) particle.attribute_array(it, ia_vx, ib);
         pvy = (enzo_float *) particle.attribute_array(it, ia_vy, ib);
         pvz = (enzo_float *) particle.attribute_array(it, ia_vz, ib);
-        pvx[io] = velocity_x[i];
-        pvy[io] = velocity_y[i];
-        pvz[io] = velocity_z[i];
+        pvx[ipp * dv] = velocity_x[i];
+        pvy[ipp * dv] = velocity_y[i];
+        pvz[ipp * dv] = velocity_z[i];
 
         // finalize attributes
         plifetime = (enzo_float *) particle.attribute_array(it, ia_l, ib);
-        pform     = (enzo_float *) particle.attribute_array(it, ia_to, ib);
-        pform[io]     =  enzo_block->time();   // formation time
+        pcreation     = (enzo_float *) particle.attribute_array(it, ia_c, ib);
+        pcreation[ipp * dc]     =  enzo_block->time();   // formation time
 	// lifetime is hard-coded here, maybe should be a parameter
-        plifetime[io] =  10.0 * cello::Myr_s / enzo_units->time() ;
-	paccrate = (enzo_float *) particle.attribute_array(it, ia_accrate, ib);
-        paccrate_time = (enzo_float *) particle.attribute_array(it, ia_accrate_time,
-								ib);
-	ptimeindex = (int *) particle.attribute_array(it, ia_timeindex, ib);
-	ptimeindex[io] = 0;
-	pclass = (int *) particle.attribute_array(it, ia_class, ib);
-	pclass[io] = SMS;  //see star_type enum in _enzo.hpp
-	*(&paccrate[io]) = 0.0; // I don't count formation as accretion per se
-	*(&paccrate_time[io]) = pform[io];
+        plifetime[ipp * dl] =  10.0 * cello::Myr_s / enzo_units->time() ;
+	//paccrate = (enzo_float *) particle.attribute_array(it, ia_accrate, ib);
+        //paccrate_time = (enzo_float *) particle.attribute_array(it, ia_accrate_time,
+	//	ib);
+      //ptimeindex = (int *) particle.attribute_array(it, ia_timeindex, ib);
+      //ptimeindex[io] = 0;
+      //pclass = (int *) particle.attribute_array(it, ia_class, ib);
+      //pclass[io] = SMS;  //see star_type enum in _enzo.hpp
+      //*(&paccrate[io]) = 0.0; // I don't count formation as accretion per se
+       //*(&paccrate_time[io]) = pform[io];
 
 	/* Starting point of accretion rate pointer for this particle */
-	paccrate = &paccrate[io];
-	paccrate_time = &paccrate_time[io];
-	paccrate += sizeof(enzo_float);
-	paccrate_time += sizeof(enzo_float);
+	//paccrate = &paccrate[io];
+	//paccrate_time = &paccrate_time[io];
+	//paccrate += sizeof(enzo_float);
+	//paccrate_time += sizeof(enzo_float);
 
 	/* Now initialise the array from this offset point onwards */
 	/* STEFAN: I don't think this is necessary. I think we can set attribrutes
 	   to be arrays */
-	for(int k = 1; k < SS_NTIMES; k++, paccrate++, paccrate_time++) {
-	  *paccrate = k;
-	  *paccrate_time = k;
-	}
+	//for(int k = 1; k < SS_NTIMES; k++, paccrate++, paccrate_time++) {
+      // *paccrate = k;
+      //  *paccrate_time = k;
+      //}
 	
         if (metal){
-          pmetal     = (enzo_float *) particle.attribute_array(it, ia_metal, ib);
-          pmetal[io] = metal[i] / density[i];
+          pmetal     = (enzo_float *) particle.attribute_array(it, ia_mf, ib);
+          pmetal[ipp * dmf] = metal[i] / density[i];
         }
 
 	/* Specify that particle is local to the block */
-	//is_local = (int64_t *) particle.attribute_array(it,ia_local,ib);
-	//is_local[io] = 1;
+	is_local = (int64_t *) particle.attribute_array(it,ia_loc,ib);
+	is_local[ipp * dloc] = 1;
 	
         // Remove mass from grid and rescale fraction fields
 	density[i] = jeans_density;
