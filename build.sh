@@ -15,7 +15,7 @@
 arch=$CELLO_ARCH
 prec=$CELLO_PREC
 
-python="python2"
+scons=`which scons`
 
 # initialize time
 
@@ -40,7 +40,7 @@ if [ "$#" -ge 1 ]; then
        d=`date +"%Y-%m-%d %H:%M:%S"`
       printf "$d %-14s cleaning..."
       for prec in single double; do
-         $python scons.py arch=$arch -c >& /dev/null
+         $scons arch=$arch -c >& /dev/null
          rm -rf bin >& /dev/null
          rm -rf lib >& /dev/null
       done
@@ -144,17 +144,12 @@ if [ $target == "test" ]; then
     echo "$prec"     > test/PREC
 fi    
 
-echo "HERE2!!!!!!!!!!!!"
-$python scons.py install-inc    &>  $dir/out.scons
-echo $python
-echo $k_switch
-echo $proc
-echo $target
-$python scons.py $k_switch -j $proc -Q $target  2>&1 | tee $dir/out.scons
-echo "HERE3!!!!!!!!!!!!"
+$scons install-inc    &>  $dir/out.scons
+$scons $k_switch -j $proc -Q $target  2>&1 | tee $dir/out.scons
+
 ./tools/awk/error-org.awk   < $dir/out.scons >  errors.org
 ./tools/awk/warning-org.awk < $dir/out.scons >  warnings.org
-echo "HERE3!!!!!!!!!!!!"
+
 if [ -e $target ]; then
    echo "Success"
 else
@@ -169,7 +164,7 @@ printf "done\n" >> $log
 # TESTS
 
 if [ $target == "test" ]; then
-    echo "HERE!!!!!!!!!!!!"
+    
     rm -f              test/STOP
 
    # count failures, incompletes, and passes

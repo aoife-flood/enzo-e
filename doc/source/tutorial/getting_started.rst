@@ -32,7 +32,7 @@ repository `Enzo-E / Cello github repository
 
 
 Before compiling ``Enzo-E / Cello``, you may also need to download
-and install 1.``Charm++``, 2.``HDF5``, 3.``libpng``, and 3.``libboost``:
+and install 1.``Charm++``, 2.``HDF5``, 3.``libpng``, 3.``libboost``, and 4.``scons``:
 
 1. Install ``Charm++``
 ----------------------
@@ -82,9 +82,27 @@ If ``libboost-dev`` is not already installed on your machine, it may be
 available through your operating system distribution, otherwise it can
 be downloaded from the `libboost <https://www.boost.org/>`_ website.
 
+5. Install ``scons``
+--------------------
+
+"`SCons <https://www.scons.org/>`_" is a "software construction tool" that is
+used to build ``Enzo-E / Cello`` using scripts written in ``python``.
+
+``scons`` can be install via ``pip`` or if you are using Anaconda or Miniconda
+through ``conda``. It may also be pre-packed for installation for your operating system
+distribution. Building ``Enzo-E / Cello`` requires a version of ``scons`` built
+for Python 3. See `Installing SCons
+<https://scons.org/doc/production/HTML/scons-user/ch01s02.html>`_ for
+installation details.
+
+6. Install Grackle
+------------------
+
 By default Enzo-E requires the Grackle chemistry and cooling library.
 If you do not need to use Grackle, you can change the line
 ``use_grackle = 1`` in the ``SConstruct`` file to ``use_grackle = 0``.
+See the `Grackle documentation <https://grackle.readthedocs.io>`__ for installation
+instructions.
 
 Configuring
 ===========
@@ -240,12 +258,25 @@ and take a look at Enzo-E's output.
 An included "Hello World" problem can be run using the following
 from the ``$CELLO_HOME`` directory:
 
-     ``charmrun +p4 bin/enzo-p input/Hi.in``
+     ``charmrun +p4 bin/enzo-p input/HelloWorld/Hi.in``
 
 This assumes that the ``charmrun`` command is in your path.  If it
 is not, then you will need to include the path name as well, e.g.:
 
-     ``~/Charm/bin/charmrun +p4 bin/enzo-p input/Hi.in``
+     ``~/Charm/bin/charmrun +p4 bin/enzo-p input/HelloWorld/Hi.in``
+
+This also assumes that local connections can be established passwordless.
+If errors like
+
+..  code-block:: bash
+
+    Permission denied (publickey,gssapi-keyex,gssapi-with-mic,password,hostbased).
+    Charmrun> Error 255 returned from remote shell (localhost:0)
+
+are displayed a node local run (i.e., no "remote" connections even to the local host)
+could be used instead by add ``++local`` to ``charmrun``, e.g.:
+
+     ``~/Charm/bin/charmrun ++local +p4 bin/enzo-p input/HelloWorld/Hi.in``
 
 If all goes well, Enzo-E will run the Hello World problem.  Below are
 some of the generated images from the longer-running "HelloWorld.in"
