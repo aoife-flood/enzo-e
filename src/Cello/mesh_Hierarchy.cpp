@@ -307,3 +307,76 @@ void Hierarchy::create_subblock_array
     
 }
 
+// --------------------------------------------------------------------
+
+void Hierarchy::get_nearest_periodic_image
+(const double * x, const double *y, double * npi)
+
+{
+  const int rank = cello::rank();
+  double domain_width;
+  double n;
+  if (periodicity_[0]){
+    domain_width = upper_[0] - lower_[0];
+    n = std::floor((x[0] - y[0])/domain_width);
+    npi[0] = ((x[0] - y[0])/domain_width - n < 0.5) ?
+      x[0] - n * domain_width : x[0] - (n + 1.0) * domain_width ;
+  }
+  else npi[0] = x[0];
+  if (rank >= 2){
+    if (periodicity_[1]){
+      domain_width = upper_[1] - lower_[1];
+      n = std::floor((x[1] - y[1])/domain_width);
+      npi[1] = ((x[1] - y[1])/domain_width - n < 0.5) ?
+	x[1] - n * domain_width : x[1] - (n + 1.0) * domain_width ;
+    }
+    else npi[1] = x[1];
+  }
+
+  if (rank >= 3){
+    if (periodicity_[2]){
+      domain_width = upper_[2] - lower_[2];
+      n = std::floor((x[2] - y[2])/domain_width);
+      npi[2] = ((x[2] - y[2])/domain_width - n < 0.5) ?
+	x[2] - n * domain_width : x[2] - (n + 1.0) * domain_width ;
+    }
+    else npi[2] = x[2];
+  }
+  
+  return;
+  
+}
+
+// --------------------------------------------------------------------
+
+void Hierarchy::get_folded_position
+(const double * x, double * folded_x)
+
+{
+  const int rank = cello::rank();
+  double domain_width;
+  double n;
+  if (periodicity_[0]){
+    domain_width = upper_[0] - lower_[0];
+    n = std::floor((x[0] - lower_[0])/domain_width);
+    folded_x[0] = x[0] - n*domain_width;
+  }
+  else folded_x[0] = x[0];
+  if (rank >= 2){
+    if (periodicity_[1]){
+      domain_width = upper_[1] - lower_[1];
+      n = std::floor((x[1] - lower_[1])/domain_width);
+      folded_x[1] = x[1] - n*domain_width;
+    }
+    else folded_x[1] = x[1];
+  }
+  if (periodicity_[2]){
+    domain_width = upper_[2] - lower_[2];
+    n = std::floor((x[2] - lower_[2])/domain_width);
+    folded_x[2] = x[2] - n*domain_width;
+  }
+  else folded_x[2] = x[2];
+
+  return;
+  
+}

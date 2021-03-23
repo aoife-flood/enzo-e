@@ -62,11 +62,6 @@ protected: // methods
 					int ** group_lists,int * group_sizes,
 					int i);
   bool particle_in_block_(int i,  EnzoBlock * enzo_block, int it);
-
-  double nearest_periodic_image_(double x, double y, double dm, double dp,
-				 int periodic);
-
-  double fold_position_(double x, double dm, double dp, int periodic);
   
 protected: // attributes
 

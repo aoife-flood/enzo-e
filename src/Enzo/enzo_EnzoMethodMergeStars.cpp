@@ -86,16 +86,7 @@ double EnzoMethodMergeStars::timestep ( Block *block) const throw()
 
 void EnzoMethodMergeStars::compute_(Block * block)
 {
-  // Get dimensions of domain
-  Hierarchy * hierarchy = cello::hierarchy();
-  double domain_xm, domain_ym, domain_zm, domain_xp, domain_yp, domain_zp;
-  hierarchy->lower(&domain_xm,&domain_ym,&domain_zm);
-  hierarchy->upper(&domain_xp,&domain_yp,&domain_zp);
-
-  // Get periodicity in each axis
-  int periodic_x, periodic_y, periodic_z;
-  hierarchy->get_periodicity(&periodic_x,&periodic_y,&periodic_z);
-  
+  Hierarchy * hierarchy = cello::hierarchy();  
   EnzoBlock * enzo_block = enzo::block(block);
   Particle particle = enzo_block->data()->particle();
   int it = particle.type_index("star");
@@ -204,6 +195,7 @@ void EnzoMethodMergeStars::compute_(Block * block)
 	enzo_float px1 = px[ip1*dp];
 	enzo_float py1 = py[ip1*dp];
 	enzo_float pz1 = pz[ip1*dp];
+	double pos1[3] = {px1,py1,pz1};
 	enzo_float pvx1 = pvx[ip1*dv];
 	enzo_float pvy1 = pvy[ip1*dv];
 	enzo_float pvz1 = pvz[ip1*dv];
@@ -250,40 +242,22 @@ void EnzoMethodMergeStars::compute_(Block * block)
 	  enzo_float pvx2 = pvx[ip2*dv];
 	  enzo_float pvy2 = pvy[ip2*dv];
 	  enzo_float pvz2 = pvz[ip2*dv];
+	  const double pos2[3] = {px2,py2,pz2};
 	  enzo_float plifetime2 = plifetime[ip2*dl];
 	  enzo_float pcreation2 = pcreation[ip2*dc];
 	  enzo_float pmetal2 = pmetal[ip2*dmf];
 	    
 	  enzo_float f1 = pmass1 / (pmass1 + pmass2);
-	  enzo_float f2 = 1.0 - f1;
-
-#ifdef DEBUG_MERGESTARS
-	  if (pmass2 < 0){
-	    CkPrintf("%dth particle in group %d out of %d on Block %s"
-		     "Particle block index = %d, batch_index = %d, "
-		     "particle batch index = %d. Mass = %g. Position = (%g,%g,%g)\n",
-		     j,i,ngroups, block->name().c_str(),group_list[i][j],ib2,ip2,
-		     pmass2,px2,py2,pz2);
-	    CkExit(-1);
-	  }
-#endif 
-	  
+	  enzo_float f2 = 1.0 - f1;	  
 	    
 	  // Get the nearest periodic image of particle 2 to particle 1
-	  const double npi_x = nearest_periodic_image_(px2, px1,
-						       domain_xm, domain_xp,
-						       periodic_x);
-	  const double npi_y = nearest_periodic_image_(py2, py1,
-						       domain_ym, domain_yp,
-						       periodic_y);
-	  const double npi_z = nearest_periodic_image_(pz2, pz1,
-						       domain_zm, domain_zp,
-						       periodic_z);
+	  double npi[3];
+	  hierarchy->get_nearest_periodic_image(pos2,pos1,npi);
 
 	  // Compute new properties of 'particle 1'
-	  px1 = f1 * px1 + f2 * npi_x;
-	  py1 = f1 * py1 + f2 * npi_y;
-	  pz1 = f1 * pz1 + f2 * npi_z;
+	  px1 = f1 * px1 + f2 * npi[0];
+	  py1 = f1 * py1 + f2 * npi[1];
+	  pz1 = f1 * pz1 + f2 * npi[2];
 	  pvx1 = f1 * pvx1 + f2 * pvx2;
 	  pvy1 = f1 * pvy1 + f2 * pvy2;
 	  pvz1 = f1 * pvz1 + f2 * pvz2;
@@ -315,11 +289,17 @@ void EnzoMethodMergeStars::compute_(Block * block)
 	pmetal    = (enzo_float *) particle.attribute_array(it, ia_mf, ib1);
 	  
 	pmass[ip1*dm] = pmass1;
-	  
+
+	 
+	double folded_pos[3];
+	pos1[0] = px1;
+	pos1[1] = py1;
+	pos1[2] = pz1;
 	// Fold position within the domain if periodic boundary positions
-	px[ip1*dp] = fold_position_(px1,domain_xm,domain_xp,periodic_x);
-	py[ip1*dp] = fold_position_(py1,domain_ym,domain_yp,periodic_y);
-	pz[ip1*dp] = fold_position_(pz1,domain_zm,domain_zp,periodic_z);
+	hierarchy->get_folded_position(pos1,folded_pos);
+	px[ip1*dp] = folded_pos[0];
+	py[ip1*dp] = folded_pos[1];
+	pz[ip1*dp] = folded_pos[2];
 
 #ifdef DEBUG_MERGESTARS
 	CkPrintf("After merging all particles in group %d out of %d on Block %s: "
@@ -412,6 +392,8 @@ void EnzoMethodMergeStars::get_particle_coordinates_block_units_
    double * particle_coordinates_block_units,
    double * merging_radius_block_units)
 {
+  Hierarchy * hierarchy = cello::hierarchy();
+  
   // Get dimensions of block
   double block_xm, block_ym, block_zm, block_xp, block_yp, block_zp;
   enzo_block->lower(&block_xm,&block_ym,&block_zm);
@@ -432,21 +414,8 @@ void EnzoMethodMergeStars::get_particle_coordinates_block_units_
   const double block_centre_x = 0.5 * (block_xm + block_xp);
   const double block_centre_y = 0.5 * (block_ym + block_yp);
   const double block_centre_z = 0.5 * (block_zm + block_zp);
+  const double block_centre[3] = {block_centre_x,block_centre_y,block_centre_z};
   
-  // Get dimensions of domain
-  Hierarchy * hierarchy = cello::hierarchy();
-  double domain_xm, domain_ym, domain_zm, domain_xp, domain_yp, domain_zp;
-  hierarchy->lower(&domain_xm,&domain_ym,&domain_zm);
-  hierarchy->upper(&domain_xp,&domain_yp,&domain_zp);
-
-  // Get periodicity in each axis
-  int periodic_x, periodic_y, periodic_z;
-  hierarchy->get_periodicity(&periodic_x,&periodic_y,&periodic_z);
-
-  const double domain_width_x = domain_xp - domain_xm;
-  const double domain_width_y = domain_yp - domain_ym;
-  const double domain_width_z = domain_zp - domain_zm;
-
   Particle particle = enzo_block->data()->particle();
   const int ia_x = particle.attribute_index (it, "x");
   const int ia_y = particle.attribute_index (it, "y");
@@ -475,24 +444,18 @@ void EnzoMethodMergeStars::get_particle_coordinates_block_units_
     // Get the nearest periodic image to the block centre. If
     // boundary conditions are non-periodic, this just returns the particle
     // coordinates
-    const double npi_x = nearest_periodic_image_(px[ip_block * dp],
-						 block_centre_x, domain_xm, domain_xp,
-						 periodic_x);
-    const double npi_y = nearest_periodic_image_(py[ip_block * dp],
-						 block_centre_y, domain_ym, domain_yp,
-						 periodic_y);
-    const double npi_z = nearest_periodic_image_(pz[ip_block * dp],
-						 block_centre_z, domain_zm, domain_zp,
-						 periodic_z);
+    double npi[3];
+    const double pos[3] = {px[ip_batch*dp],py[ip_batch*dp],pz[ip_batch*dp]};
+    hierarchy->get_nearest_periodic_image(pos,block_centre,npi);
 
     // Now we can set particle coordinates in block units
 
     particle_coordinates_block_units[3*ip_block]
-                             = (npi_x - block_centre_x) / block_width;
+                             = (npi[0] - block_centre[0]) / block_width;
     particle_coordinates_block_units[3*ip_block + 1]
-                             = (npi_y - block_centre_y) / block_width; 
+                             = (npi[1] - block_centre[1]) / block_width; 
     particle_coordinates_block_units[3*ip_block + 2]
-                             = (npi_z - block_centre_z) / block_width; 
+                             = (npi[2] - block_centre[2]) / block_width; 
     
   } // ip loop
   
@@ -557,41 +520,6 @@ bool EnzoMethodMergeStars::particles_in_neighbouring_blocks_
   return return_val;
 }
 
-// Returns the nearest periodic image of x to y
-double EnzoMethodMergeStars::nearest_periodic_image_(double x, double y,
-						     double dm, double dp,
-						     int periodic)
-{
-  double domain_width = dp - dm;
-
-  // We want to check if x +/- domain_width is closer to y than x
-  // If it is, then we return x +/- domain_width
-  double return_val = x;
-  if (periodic){
-    if (std::fabs(x + domain_width - y) < std::fabs(x - y))
-      return_val = x + domain_width;
-    
-    if (std::fabs(x - domain_width - y) < std::fabs(x - y))
-      return_val = x - domain_width;
-  }
-  return return_val;
-}
-
-// In the case of periodic boundary conditions, this folds the position of the
-// particle back into the domain
-double EnzoMethodMergeStars::fold_position_(double x,
-					    double dm, double dp,
-					    int periodic)
-{
-  const double domain_width = dp - dm;
-  double return_val = x;
-  if (periodic){
-    if (x < dm) return_val += domain_width;
-    if (x > dp) return_val -= domain_width;
-  }
-  return return_val;
-}
-
  bool EnzoMethodMergeStars::particle_in_block_(int i,  EnzoBlock * enzo_block, int it)
 {
   bool return_val = 1;
@@ -618,10 +546,6 @@ double EnzoMethodMergeStars::fold_position_(double x,
       py[ip * dp] < block_ym || py[ip * dp] > block_yp ||
       pz[ip * dp] < block_zm || pz[ip * dp] > block_zp)
     return_val = 0;
-
-  CkPrintf("position = (%g,%g,%g) block_min = (%g,%g,%g) block_max = (%g,%g,%g) "
-           "return_val = %d \n",px[ip*dp],py[ip*dp],pz[ip*dp],block_xm,block_ym,
-	   block_zm,block_xp,block_yp,block_zp,return_val);
-
+  
   return return_val;
 }

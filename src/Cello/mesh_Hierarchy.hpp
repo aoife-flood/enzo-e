@@ -108,6 +108,16 @@ public: // interface
     if (pz) (*pz) = periodicity_[2];
   }
 
+  /// Sets npi to be the nearest periodic image of position x to position y
+  /// If non-periodic boundary conditions in a given axis i, npi[i] = x[i]
+  void get_nearest_periodic_image(const double * x, const double *y,
+					    double * npi);
+
+  /// For a position x, this sets folded_x to be to periodic image of x which is
+  /// in the domain.
+  /// If non-periodic boundary conditions in a given axis i, folded_x[i] = x[i]
+  void get_folded_position(const double * x, double * folded_x);
+
   //----------------------------------------------------------------------
 
   /// Return whether Blocks have been allocated or not
