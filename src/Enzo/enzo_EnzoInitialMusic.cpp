@@ -81,7 +81,7 @@ void EnzoInitialMusic::pup (PUP::er &p)
 //----------------------------------------------------------------------
 
 void EnzoInitialMusic::enforce_block
-( Block * block, const Hierarchy * hierarchy ) throw()
+( Block * block, Hierarchy * hierarchy ) throw()
 {
 
   if (block->level() != level_) return;

@@ -46,7 +46,7 @@ void InitialValue::pup (PUP::er &p)
 //----------------------------------------------------------------------
 
 void InitialValue::enforce_block ( Block * block,
-				   const Hierarchy  * hierarchy ) throw()
+				   Hierarchy  * hierarchy ) throw()
 {
   // make sure values_ is initialized
   initialize_values_();

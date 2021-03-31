@@ -46,7 +46,7 @@ public: // virtual functions
 
   /// Initialize a Block
   virtual void enforce_block
-  ( Block * block, const Hierarchy * hierarchy ) throw();
+  ( Block * block, Hierarchy * hierarchy ) throw();
 
 private: // functions
 

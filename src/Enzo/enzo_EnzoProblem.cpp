@@ -166,6 +166,9 @@ Initial * EnzoProblem::create_initial_
        enzo_config->initial_collapse_temperature,
        enzo_config->initial_collapse_density_profile,
        enzo_config->initial_collapse_truncation_density);
+
+  } else if (type == "shu_collapse") {
+    initial = new EnzoInitialShuCollapse(enzo_config);
   } else if (type == "cosmology") {
     initial = new EnzoInitialCosmology
       (cycle,time,
@@ -191,10 +194,7 @@ Initial * EnzoProblem::create_initial_
        enzo_config->initial_turbulence_temperature,
        enzo_config->field_gamma);
   } else if (type == "pm") {
-    printf("%s: config->initial_list[index] = %s\n", __FUNCTION__, config->initial_list[index]);
-    printf("%s: enzo_config->initial_pm_mpp = %f\n", __FUNCTION__, enzo_config->initial_pm_mpp);
     std::string param_str = "Initial:" + config->initial_list[index] + ":mask";
-    printf("%s: param_str = %s\n", __FUNCTION__, param_str);
     initial = new EnzoInitialPm
       (parameters, param_str,
        cycle,time,

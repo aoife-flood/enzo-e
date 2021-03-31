@@ -74,7 +74,7 @@ void EnzoInitialFeedbackTest::pup (PUP::er &p)
 }
 
 void EnzoInitialFeedbackTest::enforce_block
-( Block * block, const Hierarchy * hierarchy) throw()
+( Block * block, Hierarchy * hierarchy) throw()
 {
 
   ASSERT("EnzoInitialFeedbackTest","Block does not exist", block != NULL);

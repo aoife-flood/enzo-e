@@ -60,7 +60,7 @@ void EnzoInitialSedovRandom::pup (PUP::er &p)
 //----------------------------------------------------------------------
 
 void EnzoInitialSedovRandom::enforce_block
-( Block * block, const Hierarchy * hierarchy ) throw()
+( Block * block, Hierarchy * hierarchy ) throw()
 
 {
 

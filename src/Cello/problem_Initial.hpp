@@ -55,7 +55,7 @@ public: // virtual functions
   /// Initialize a Block
   virtual void enforce_block
   ( Block            * block, 
-    const Hierarchy  * hierarchy
+    Hierarchy  * hierarchy
     ) throw();
 
   /// Return whether enforce() expects block != NULL

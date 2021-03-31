@@ -310,13 +310,15 @@ void Hierarchy::create_subblock_array
 // --------------------------------------------------------------------
 
 void Hierarchy::get_nearest_periodic_image
-(const double * x, const double *y, double * npi)
+(double * x, double *y, double * npi) 
 
 {
   const int rank = cello::rank();
   double domain_width;
   double n;
-  if (periodicity_[0]){
+  int periodic_x, periodic_y,periodic_z;
+  get_periodicity(&periodic_x,&periodic_y,&periodic_z);
+  if (periodic_x){
     domain_width = upper_[0] - lower_[0];
     n = std::floor((x[0] - y[0])/domain_width);
     npi[0] = ((x[0] - y[0])/domain_width - n < 0.5) ?
@@ -324,7 +326,7 @@ void Hierarchy::get_nearest_periodic_image
   }
   else npi[0] = x[0];
   if (rank >= 2){
-    if (periodicity_[1]){
+    if (periodic_y){
       domain_width = upper_[1] - lower_[1];
       n = std::floor((x[1] - y[1])/domain_width);
       npi[1] = ((x[1] - y[1])/domain_width - n < 0.5) ?
@@ -334,7 +336,7 @@ void Hierarchy::get_nearest_periodic_image
   }
 
   if (rank >= 3){
-    if (periodicity_[2]){
+    if (periodic_z){
       domain_width = upper_[2] - lower_[2];
       n = std::floor((x[2] - y[2])/domain_width);
       npi[2] = ((x[2] - y[2])/domain_width - n < 0.5) ?
@@ -350,33 +352,38 @@ void Hierarchy::get_nearest_periodic_image
 // --------------------------------------------------------------------
 
 void Hierarchy::get_folded_position
-(const double * x, double * folded_x)
+(double * x, double * folded_x)
 
 {
   const int rank = cello::rank();
   double domain_width;
   double n;
-  if (periodicity_[0]){
+  int periodic_x, periodic_y,periodic_z;
+  get_periodicity(&periodic_x,&periodic_y,&periodic_z);
+  if (periodic_x){
     domain_width = upper_[0] - lower_[0];
     n = std::floor((x[0] - lower_[0])/domain_width);
     folded_x[0] = x[0] - n*domain_width;
   }
   else folded_x[0] = x[0];
   if (rank >= 2){
-    if (periodicity_[1]){
+    if (periodic_y){
       domain_width = upper_[1] - lower_[1];
+      CkPrintf("x[1] = %g \n", x[1]);
       n = std::floor((x[1] - lower_[1])/domain_width);
       folded_x[1] = x[1] - n*domain_width;
     }
     else folded_x[1] = x[1];
   }
-  if (periodicity_[2]){
-    domain_width = upper_[2] - lower_[2];
-    n = std::floor((x[2] - lower_[2])/domain_width);
-    folded_x[2] = x[2] - n*domain_width;
+  if (rank >= 3){
+    if (periodic_z){
+      domain_width = upper_[2] - lower_[2];
+      CkPrintf("x[2] = %g \n" ,x[2]);
+      n = std::floor((x[2] - lower_[2])/domain_width);
+      folded_x[2] = x[2] - n*domain_width;
+    }
+    else folded_x[2] = x[2];
   }
-  else folded_x[2] = x[2];
-
   return;
   
 }

@@ -58,7 +58,7 @@ public: // virtual functions
   /// InitialTraceize a Block
   virtual void enforce_block
   ( Block            * block, 
-    const Hierarchy  * hierarchy
+    Hierarchy        * hierarchy
     ) throw();
 
 protected: // functions

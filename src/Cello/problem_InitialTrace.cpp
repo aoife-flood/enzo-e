@@ -30,7 +30,7 @@ void InitialTrace::pup (PUP::er &p)
 
 void InitialTrace::enforce_block
  ( Block            * block, 
-   const Hierarchy  * hierarchy
+   Hierarchy  * hierarchy
    ) throw()
 {
   const int in = cello::index_static();

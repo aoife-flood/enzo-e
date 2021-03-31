@@ -52,7 +52,7 @@ void EnzoInitialTurbulence::pup (PUP::er &p)
 //----------------------------------------------------------------------
 
 void EnzoInitialTurbulence::enforce_block 
-( Block * block, const Hierarchy * hierarchy ) throw()
+( Block * block, Hierarchy * hierarchy ) throw()
 
 {
   TRACE_TURBULENCE;

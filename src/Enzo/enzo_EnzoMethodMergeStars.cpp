@@ -242,7 +242,7 @@ void EnzoMethodMergeStars::compute_(Block * block)
 	  enzo_float pvx2 = pvx[ip2*dv];
 	  enzo_float pvy2 = pvy[ip2*dv];
 	  enzo_float pvz2 = pvz[ip2*dv];
-	  const double pos2[3] = {px2,py2,pz2};
+	  double pos2[3] = {px2,py2,pz2};
 	  enzo_float plifetime2 = plifetime[ip2*dl];
 	  enzo_float pcreation2 = pcreation[ip2*dc];
 	  enzo_float pmetal2 = pmetal[ip2*dmf];
@@ -414,7 +414,7 @@ void EnzoMethodMergeStars::get_particle_coordinates_block_units_
   const double block_centre_x = 0.5 * (block_xm + block_xp);
   const double block_centre_y = 0.5 * (block_ym + block_yp);
   const double block_centre_z = 0.5 * (block_zm + block_zp);
-  const double block_centre[3] = {block_centre_x,block_centre_y,block_centre_z};
+  double block_centre[3] = {block_centre_x,block_centre_y,block_centre_z};
   
   Particle particle = enzo_block->data()->particle();
   const int ia_x = particle.attribute_index (it, "x");
@@ -445,7 +445,7 @@ void EnzoMethodMergeStars::get_particle_coordinates_block_units_
     // boundary conditions are non-periodic, this just returns the particle
     // coordinates
     double npi[3];
-    const double pos[3] = {px[ip_batch*dp],py[ip_batch*dp],pz[ip_batch*dp]};
+    double pos[3] = {px[ip_batch*dp],py[ip_batch*dp],pz[ip_batch*dp]};
     hierarchy->get_nearest_periodic_image(pos,block_centre,npi);
 
     // Now we can set particle coordinates in block units

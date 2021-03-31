@@ -688,7 +688,7 @@ std::vector<std::string> EnzoInitialInclinedWave::hd_waves_() const throw()
 //----------------------------------------------------------------------
 
 void EnzoInitialInclinedWave::enforce_block(Block * block,
-					  const Hierarchy * hierarchy) throw()
+					    Hierarchy * hierarchy) throw()
 {
   // Set up the test problem
   // Only currently works on unigrid and only currently supports hydro methods

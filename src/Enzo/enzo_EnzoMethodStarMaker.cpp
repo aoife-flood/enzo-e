@@ -39,6 +39,9 @@ EnzoMethodStarMaker::EnzoMethodStarMaker
   cello::simulation()->new_refresh_set_name(ir_post_,name());
 
   Refresh * refresh = cello::refresh(ir_post_);
+  ParticleDescr * particle_descr = cello::particle_descr();
+  refresh->add_particle(particle_descr->type_index("star"),false);
+
 
   refresh->add_all_fields();
 

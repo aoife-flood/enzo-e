@@ -30,7 +30,7 @@ void EnzoInitialImplosion2::pup (PUP::er &p)
 //----------------------------------------------------------------------
 
 void EnzoInitialImplosion2::enforce_block 
-( Block * block, const Hierarchy  * hierarchy ) throw()
+( Block * block, Hierarchy  * hierarchy ) throw()
 
 {
 

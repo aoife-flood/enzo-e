@@ -44,7 +44,7 @@ void EnzoInitialGrackleTest::pup (PUP::er &p)
 
 void EnzoInitialGrackleTest::enforce_block
 (
- Block * block, const Hierarchy  * hierarchy) throw()
+ Block * block, Hierarchy  * hierarchy) throw()
 {
 #ifndef CONFIG_USE_GRACKLE
 

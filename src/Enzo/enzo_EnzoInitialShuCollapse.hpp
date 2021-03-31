@@ -18,30 +18,14 @@ class EnzoInitialShuCollapse : public Initial {
 public: // interface
 
   /// CHARM++ constructor
-  EnzoInitialShuCollapse
-  (int cycle, double time,
-   int rank,
-   const double centre[3],
-   double truncation_radius,
-   double sound_speed,
-   double instability_parameter,
-   const double drift_velocity[3],
-   bool central_particle
-   ) throw()
-    : Initial (cycle,time),
-      rank_(rank),
-      truncation_radius_(truncation_radius_),
-      sound_speed_(sound_speed),
-      instability_parameter_(instability_parameter),
-      central_particle_(central_particle)
+  EnzoInitialShuCollapse() throw()
+  : Initial (),
+    truncation_radius_(0.0),
+    sound_speed_(0.0),
+    instability_parameter_(0.0),
+    central_particle_(false),
+    central_particle_mass_(0.0)
   {
-    centre_[0] = centre[0];
-    centre_[1] = centre[1];
-    centre_[2] = centre[2];
-
-    drift_velocity_[0] = drift_velocity[0];
-    drift_velocity_[1] = drift_velocity[1];
-    drift_velocity_[2] = drift_velocity[2];
   }    
 
     /// Constructor
@@ -53,20 +37,12 @@ public: // interface
   /// CHARM++ migration constructor
   EnzoInitialShuCollapse(CkMigrateMessage *m)
     : Initial (m),
-      rank_(0),
       truncation_radius_(0.0),
       sound_speed_(0.0),
       instability_parameter_(0.0),
       central_particle_(false),
+      central_particle_mass_(0.0)
   {
-
-    centre_[0] = centre[0];
-    centre_[1] = centre[1];
-    centre_[2] = centre[2];
-
-    drift_velocity_[0] = drift_velocity[0];
-    drift_velocity_[1] = drift_velocity[1];
-    drift_velocity_[2] = drift_velocity[2];
   }
 
   /// CHARM++ Pack / Unpack function
@@ -75,4 +51,36 @@ public: // interface
   /// Initialize the block
 
   virtual void enforce_block
-  ( Block * block, const Hierarchy * hierarchy ) throw();
+  ( Block * block, Hierarchy * hierarchy ) throw();
+
+  private: // attributes
+  
+  /// Location of the centre of collapse
+  double centre_[3];
+
+  /// Drift velocity of the whole system
+  double drift_velocity_[3];
+
+  /// Truncation radius - must be less than half the total domain width
+  double truncation_radius_;
+
+  /// Sound speed of the gas - internal energy calculated from this
+  double sound_speed_;
+
+  /// Instability parameter as defined in Shu 1977
+  double instability_parameter_;
+
+  /// Is there are star particle initialised at the centre of collapse?
+  bool central_particle_;
+
+  /// Mass of the central particle
+  double central_particle_mass_;
+
+  /// Physics variables we store as attribrutes for convenience
+  double gamma_;
+  double ggm1_;
+  double grav_constant_internal_units_;
+};
+
+#endif /* ENZO_ENZO_INITIAL_COLLAPSE_HPP */
+

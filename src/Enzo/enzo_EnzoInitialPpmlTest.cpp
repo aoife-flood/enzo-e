@@ -19,7 +19,7 @@ EnzoInitialPpmlTest::EnzoInitialPpmlTest
 //----------------------------------------------------------------------
 
 void EnzoInitialPpmlTest::enforce_block
-( Block * block, const Hierarchy * hierarchy ) throw()
+( Block * block, Hierarchy * hierarchy ) throw()
 {
 
   // Problem parameters

@@ -124,7 +124,7 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   const int ia_accrate_time = particle.attribute_index (it, "accretion_rate_time");
   const int ia_loc = particle.attribute_index (it, "is_local");
 
-       // Attribrute stride lengths
+  // Attribrute stride lengths
   const int dm   = particle.stride(it, ia_m);
   const int dp   = particle.stride(it, ia_x);
   const int dv   = particle.stride(it, ia_vx);
@@ -151,9 +151,6 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   enzo_float * paccrate_time = 0;
   int64_t * is_local = 0;
 
-  // obtain the particle stride length
-  // (Not sure if this is right, isn't there a separate stride length for each attribrute?)
-  const int ps = particle.stride(it, ia_m);
   int ipp; // Particle index
   int ib; // Batch index
 
@@ -211,7 +208,6 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
 	count++; 
         int my_particle = particle.insert_particles(it, 1);
         particle.index(my_particle, &ib, &ipp);
-        //int io = ipp; // ipp*ps Stefan: Not sure about this
         pmass = (enzo_float *) particle.attribute_array(it, ia_m, ib);
 	prevmass = (enzo_float *) particle.attribute_array(it, ia_pm, ib);
 	// particle mass is mass here

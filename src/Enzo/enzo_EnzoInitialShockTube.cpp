@@ -176,7 +176,7 @@ void setup_maps_(const std::map<std::string, enzo_float> &ref_map,
 //----------------------------------------------------------------------
 
 void EnzoInitialShockTube::enforce_block 
-( Block * block, const Hierarchy  * hierarchy ) throw()
+( Block * block, Hierarchy  * hierarchy ) throw()
 {
   std::map<std::string, enzo_float> l_vals, r_vals;
   if (!flipped_initialize_) {

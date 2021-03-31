@@ -43,7 +43,7 @@ public: // interface
 
   /// Read initialization values from Initial group in parameter file
   virtual void enforce_block (Block * block,
-                              const Hierarchy * hierarchy
+                              Hierarchy * hierarchy
                               ) throw();
 
 private: // functions

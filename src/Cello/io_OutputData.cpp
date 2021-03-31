@@ -242,7 +242,8 @@ void OutputData::write_field_data
 				 &nx, &ny, &nz);
 
     // Write ith FieldData data
-
+    CkPrintf("OutputData::write_field_data index_field = %d, name = %s \n",
+	     index_field,name.c_str());
     file_->mem_create(nx,ny,nz,nx,ny,nz,0,0,0);
     if (nzd > 1) {
       file_->data_create(name.c_str(),type,nzd,nyd,nxd,1,nz,ny,nx,1);

@@ -33,7 +33,7 @@ void EnzoInitialPm::pup (PUP::er &p)
 //----------------------------------------------------------------------
 
 void EnzoInitialPm::enforce_block 
-( Block * block, const Hierarchy  * hierarchy ) throw()
+( Block * block, Hierarchy  * hierarchy ) throw()
 
 {
   Field    field    (block->data()->field());

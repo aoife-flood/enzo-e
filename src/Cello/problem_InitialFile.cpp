@@ -49,7 +49,7 @@ void InitialFile::pup (PUP::er &p)
 void InitialFile::enforce_block
 (
  Block            * block,
- const Hierarchy  * hierarchy
+ Hierarchy  * hierarchy
  ) throw()
 {
   ASSERT ("InitialFile::enforce_block",

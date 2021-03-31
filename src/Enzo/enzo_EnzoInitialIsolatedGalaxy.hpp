@@ -115,7 +115,7 @@ public: // interface
   /// Initialize block
   virtual void enforce_block
   ( Block * block,
-    const Hierarchy * hierarchy ) throw();
+    Hierarchy * hierarchy ) throw();
 
   void InitializeParticles(Block * block,
                            Particle * particle);

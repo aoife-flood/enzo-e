@@ -159,6 +159,12 @@ public: // interface
       initial_collapse_temperature(0.0),
       initial_collapse_density_profile(1),
       initial_collapse_truncation_density(0.0),
+      // EnzoInitialShuCollapse
+      initial_shu_collapse_truncation_radius(0.0),
+      initial_shu_collapse_sound_speed(0.0),
+      initial_shu_collapse_instability_parameter(0.0),
+      initial_shu_collapse_central_particle(false),
+      initial_shu_collapse_central_particle_mass(0.0),
       // EnzoGrackleTest
 #ifdef CONFIG_USE_GRACKLE
       initial_grackle_test_maximum_H_number_density(1000.0),
@@ -395,6 +401,8 @@ public: // interface
       initial_soup_d_pos[axis] = 0;
       initial_soup_d_size[axis] = 0;
       initial_collapse_array[axis] = 0;
+      initial_shu_collapse_centre[axis] = 0.0;
+      initial_shu_collapse_drift_velocity[axis] = 0.0;
       initial_IG_center_position[axis] = 0.5;
       initial_IG_bfield[axis]         = 0.0;
       method_background_acceleration_center[axis] = 0.5;
@@ -488,6 +496,15 @@ public: // attributes
   int                        initial_collapse_density_profile;
   double                     initial_collapse_truncation_density;
 
+  /// EnzoInitialShuCollapse
+  double                     initial_shu_collapse_centre[3];
+  double                     initial_shu_collapse_drift_velocity[3];
+  double                     initial_shu_collapse_truncation_radius;
+  double                     initial_shu_collapse_instability_parameter;
+  double                     initial_shu_collapse_sound_speed;
+  bool                       initial_shu_collapse_central_particle;
+  double                     initial_shu_collapse_central_particle_mass;
+  
   /// EnzoGrackleTest
 #ifdef CONFIG_USE_GRACKLE
   double                     initial_grackle_test_maximum_H_number_density;

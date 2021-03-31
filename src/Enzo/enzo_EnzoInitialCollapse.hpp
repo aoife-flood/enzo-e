@@ -70,7 +70,7 @@ public: // interface
   /// Initialize the block
 
   virtual void enforce_block
-  ( Block * block, const Hierarchy * hierarchy ) throw();
+  ( Block * block, Hierarchy * hierarchy ) throw();
 
 private: // attributes
 
@@ -103,5 +103,5 @@ private: // attributes
   double truncation_density_;
 };
 
-#endif /* ENZO_ENZO_INITIAL_SEDOV_COLLAPSE_HPP */
+#endif /* ENZO_ENZO_INITIAL_COLLAPSE_HPP */
 

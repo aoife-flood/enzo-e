@@ -32,7 +32,7 @@ void EnzoInitialBurkertBodenheimer::pup (PUP::er &p)
 
 //----------------------------------------------------------------------
 void EnzoInitialBurkertBodenheimer::enforce_block
-( Block * block, const Hierarchy  * hierarchy ) throw()
+( Block * block, Hierarchy  * hierarchy ) throw()
 
 {
 

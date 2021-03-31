@@ -130,7 +130,7 @@ void EnzoInitialBCenter::initialize_bfield_interface( Block * block,
 //----------------------------------------------------------------------
 
 void EnzoInitialBCenter::enforce_block( Block * block,
-					const Hierarchy * hierarchy ) throw()
+					Hierarchy * hierarchy ) throw()
 {
 
   // if specified, optionally initialize the face-centered magnetic field from

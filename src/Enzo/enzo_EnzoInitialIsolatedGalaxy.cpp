@@ -233,7 +233,7 @@ void EnzoInitialIsolatedGalaxy::pup (PUP::er &p)
 void EnzoInitialIsolatedGalaxy::enforce_block
 (
  Block * block,
- const Hierarchy * hierarchy
+ Hierarchy * hierarchy
  ) throw()
 {
 

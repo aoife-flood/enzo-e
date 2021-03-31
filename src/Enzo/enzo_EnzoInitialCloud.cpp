@@ -442,7 +442,7 @@ private: // atributes
 //----------------------------------------------------------------------
 
 void EnzoInitialCloud::enforce_block
-(Block * block, const Hierarchy * hierarchy) throw()
+(Block * block, Hierarchy * hierarchy) throw()
 {
   EnzoFieldArrayFactory array_factory(block);
   EFlt3DArray density = array_factory.from_name("density");

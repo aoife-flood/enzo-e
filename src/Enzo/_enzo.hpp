@@ -196,6 +196,7 @@ extern "C" {
 #include "enzo_EnzoInitialBCenter.hpp"
 #include "enzo_EnzoInitialCloud.hpp"
 #include "enzo_EnzoInitialCollapse.hpp"
+#include "enzo_EnzoInitialShuCollapse.hpp"
 #include "enzo_EnzoInitialCosmology.hpp"
 #include "enzo_EnzoInitialFeedbackTest.hpp"
 #include "enzo_EnzoInitialGrackleTest.hpp"

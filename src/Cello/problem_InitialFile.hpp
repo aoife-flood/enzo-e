@@ -49,7 +49,7 @@ public: // interface
   /// Enforce initial conditions for the given Block
 
   virtual void enforce_block (Block            * block,
-			      const Hierarchy  * hierarchy) throw();
+			      Hierarchy  * hierarchy) throw();
 
   /// Override default: InitialFile expects blocks not to be allocated
   virtual bool expects_blocks_allocated() const throw()

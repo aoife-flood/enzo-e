@@ -263,7 +263,20 @@ void Output::write_block_ ( const Block * block ) throw()
   ItIndex * it_f = it_field_index_;
   if (it_f) {
     for (it_f->first(); ! it_f->done();  it_f->next()  ) {
+      FieldDescr * field_descr = cello::field_descr();
+      CkPrintf("%s: %s :\n field index = %d \n",
+	       __FILE__,__FUNCTION__,it_f->value());
+      if (it_f->value() >= 0) {
+	CkPrintf("%s: %s :\n field name = %s \n",
+		 __FILE__,__FUNCTION__,
+		 field_descr->field_name(it_f->value()).c_str());
+      }
+    }
+  }
+  if (it_f) {
+    for (it_f->first(); ! it_f->done();  it_f->next()  ) {
       const FieldData * field_data = block->data()->field_data();
+      CkPrintf("Output::write_block_  it_f->value() = %d \n",it_f->value());
       write_field_data (field_data, it_f->value());
     }
   }
