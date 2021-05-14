@@ -40,9 +40,7 @@ EnzoMethodStarMaker::EnzoMethodStarMaker
 
   Refresh * refresh = cello::refresh(ir_post_);
   ParticleDescr * particle_descr = cello::particle_descr();
-  refresh->add_particle(particle_descr->type_index("star"),false);
-
-
+  refresh->add_particle(particle_descr->type_index("star"));
   refresh->add_all_fields();
 
   // Copy over parameters from config to local names here for convenience
@@ -345,7 +343,7 @@ int EnzoMethodStarMaker::check_jeans_mass(
 // This function implements the converging flow condition for star formation.
 // This is done by computing the symmetrised grad velocity tensor (or strain tensor)
 // a_{ij} = 0.5*(dv_i/dx_j + dv_j/dx_i), then first checking its trace is negative
-// (i.e. the velocity divergence is negative), then if this is satisfies we check
+// (i.e. the velocity divergence is negative), then if this is satisfied we check
 // if all the eigenvalues are negative
 
 int EnzoMethodStarMaker::check_converging_flow(

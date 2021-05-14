@@ -122,7 +122,7 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   const int ia_class = particle.attribute_index (it, "class");
   const int ia_accrate = particle.attribute_index (it, "accretion_rate");
   const int ia_accrate_time = particle.attribute_index (it, "accretion_rate_time");
-  const int ia_loc = particle.attribute_index (it, "is_local");
+  const int ia_copy = particle.attribute_index (it, "is_copy");
 
   // Attribrute stride lengths
   const int dm   = particle.stride(it, ia_m);
@@ -131,25 +131,25 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
   const int dl   = particle.stride(it, ia_l);
   const int dc   = particle.stride(it, ia_c);
   const int dmf  = particle.stride(it, ia_mf);
-  const int dloc = particle.stride(it, ia_loc);
+  const int d_copy = particle.stride(it, ia_copy);
   
   /// Initialise pointers for particle attribute arrays
-  enzo_float * pmass = 0;
-  enzo_float * prevmass = 0;
-  enzo_float * px   = 0;
-  enzo_float * py   = 0;
-  enzo_float * pz   = 0;
-  enzo_float * pvx  = 0;
-  enzo_float * pvy  = 0;
-  enzo_float * pvz  = 0;
-  enzo_float * pmetal = 0;
-  enzo_float * pcreation  = 0;
-  enzo_float * plifetime = 0;
-  int        * ptimeindex = 0;
-  int        * pclass     = 0;
-  enzo_float * paccrate = 0;
-  enzo_float * paccrate_time = 0;
-  int64_t * is_local = 0;
+  enzo_float * pmass;
+  enzo_float * prevmass;
+  enzo_float * px  ;
+  enzo_float * py  ;
+  enzo_float * pz  ;
+  enzo_float * pvx ;
+  enzo_float * pvy ;
+  enzo_float * pvz ;
+  enzo_float * pmetal;
+  enzo_float * pcreation ;
+  enzo_float * plifetime;
+  int        * ptimeindex;
+  int        * pclass    ;
+  enzo_float * paccrate;
+  enzo_float * paccrate_time;
+  int64_t    * is_copy;
 
   int ipp; // Particle index
   int ib; // Batch index
@@ -270,9 +270,9 @@ void EnzoMethodStarMakerSmartStar::compute ( Block *block) throw()
           pmetal[ipp * dmf] = metal[i] / density[i];
         }
 
-	/* Specify that particle is local to the block */
-	is_local = (int64_t *) particle.attribute_array(it,ia_loc,ib);
-	is_local[ipp * dloc] = 1;
+	/* Specify that newly created particle is not a copy*/
+	is_copy = (int64_t *) particle.attribute_array(it,ia_copy,ib);
+	is_copy[ipp * d_copy] = false;
 	
         // Remove mass from grid and rescale fraction fields
 	density[i] = jeans_density;
