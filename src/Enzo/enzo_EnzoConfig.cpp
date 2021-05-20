@@ -280,6 +280,7 @@ EnzoConfig::EnzoConfig() throw ()
   method_vlct_theta_limiter(0.0),
   method_vlct_density_floor(0.0),
   method_vlct_pressure_floor(0.0),
+  method_vlct_mhd_choice(""),
   method_vlct_dual_energy(false),
   method_vlct_dual_energy_eta(0.0),
   /// EnzoProlong
@@ -618,6 +619,7 @@ void EnzoConfig::pup (PUP::er &p)
   p | method_vlct_theta_limiter;
   p | method_vlct_density_floor;
   p | method_vlct_pressure_floor;
+  p | method_vlct_mhd_choice;
   p | method_vlct_dual_energy;
   p | method_vlct_dual_energy_eta;
 
@@ -1338,6 +1340,17 @@ void EnzoConfig::read(Parameters * p) throw()
   method_vlct_dual_energy_eta = p->value_float
     ("Method:mhd_vlct:dual_energy_eta", 0.001);
 
+  // we should raise an error if mhd_choice is not specified
+  bool uses_vlct = false;
+  for (size_t i=0; i<method_list.size(); i++) {
+    if (method_list[i] == "mhd_vlct") uses_vlct=true;
+  }
+  method_vlct_mhd_choice = p->value_string
+    ("Method:mhd_vlct:mhd_choice", "");
+  if (uses_vlct && (method_vlct_mhd_choice == "")){
+    ERROR("EnzoConfig::read", "Method:mhd_vlct:mhd_choice was not specified");
+  }
+
   //--------------------------------------------------
   // Physics
   //--------------------------------------------------
@@ -1502,7 +1515,7 @@ void EnzoConfig::read(Parameters * p) throw()
     /* this must be set AFTER default values are set */
     method_grackle_chemistry->use_grackle = method_grackle_use_grackle;
 
-    // Copy over parameters from Enzo-P to Grackle
+    // Copy over parameters from Enzo-E to Grackle
     method_grackle_chemistry->Gamma = field_gamma;
 
     //
@@ -1630,9 +1643,9 @@ void EnzoConfig::read(Parameters * p) throw()
       method_grackle_chemistry->UVbackground_redshift_drop);
 
     // When radiative transfer is eventually included, make
-    // sure to set the below parameter to match the Enzo-P
+    // sure to set the below parameter to match the Enzo-E
     // parameter for turning RT on / off:
-    //   method_grackle_chemistry->use_radiative_transfer = ENZO_P_PARAMETER_NAME;
+    //   method_grackle_chemistry->use_radiative_transfer = ENZO_E_PARAMETER_NAME;
 
   }
 #endif /* CONFIG_USE_GRACKLE */
