@@ -188,6 +188,7 @@ extern "C" {
 #include "enzo_IoEnzoBlock.hpp"
 
 #include "enzo_EnzoFieldArrayFactory.hpp"
+#include "enzo_EnzoEFltArrayMap.hpp"
 #include "enzo_EnzoPermutedCoordinates.hpp"
 #include "enzo_EnzoCenteredFieldRegistry.hpp"
 
@@ -219,6 +220,7 @@ extern "C" {
 #include "enzo_EnzoRefineMass.hpp"
 
 #include "enzo_EnzoMethodBackgroundAcceleration.hpp"
+#include "enzo_EnzoLazyPassiveScalarFieldList.hpp"
 #include "enzo_EnzoEquationOfState.hpp"
 #include "enzo_EnzoEOSIdeal.hpp"
 #include "enzo_EnzoIntegrableUpdate.hpp"
@@ -232,7 +234,8 @@ extern "C" {
 #include "enzo_EnzoRiemannHLL.hpp"
 #include "enzo_EnzoRiemannHLLC.hpp"
 #include "enzo_EnzoRiemannHLLD.hpp"
-#include "enzo_EnzoConstrainedTransport.hpp"
+#include "enzo_EnzoBfieldMethod.hpp"
+#include "enzo_EnzoBfieldMethodCT.hpp"
 #include "enzo_EnzoSourceInternalEnergy.hpp"
 
 #include "enzo_EnzoMethodCheckGravity.hpp"
