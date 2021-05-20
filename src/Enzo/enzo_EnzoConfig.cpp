@@ -78,6 +78,14 @@ EnzoConfig::EnzoConfig() throw ()
   initial_shu_collapse_instability_parameter(0.0),
   initial_shu_collapse_central_particle(false),
   initial_shu_collapse_central_particle_mass(0.0),
+
+  // EnzoInitialCollapseStars
+  initial_collapse_stars_truncation_radius(0.0),
+  initial_collapse_stars_sound_speed(0.0),
+  initial_collapse_stars_instability_parameter(0.0),
+  initial_collapse_stars_central_particle(false),
+  initial_collapse_stars_central_particle_mass(0.0),
+  
   // EnzoInitialGrackleTest
 #ifdef CONFIG_USE_GRACKLE
   initial_grackle_test_maximum_H_number_density(1000.0),
@@ -310,6 +318,8 @@ EnzoConfig::EnzoConfig() throw ()
     initial_collapse_array[i] = 0;
     initial_shu_collapse_centre[i] = 0.0;
     initial_shu_collapse_drift_velocity[i] = 0.0;
+    initial_collapse_stars_centre[i] = 0.0;
+    initial_collapse_stars_drift_velocity[i] = 0.0;
     initial_IG_center_position[i] = 0.5;
     initial_IG_bfield[i] = 0.0;
     method_background_acceleration_center[i] = 0.5;
@@ -417,6 +427,14 @@ void EnzoConfig::pup (PUP::er &p)
   p | initial_shu_collapse_instability_parameter;
   p | initial_shu_collapse_central_particle;
   p | initial_shu_collapse_central_particle_mass;
+
+  PUParray(p,initial_collapse_stars_centre,3);
+  PUParray(p,initial_collapse_stars_drift_velocity,3);
+  p | initial_collapse_stars_truncation_radius;
+  p | initial_collapse_stars_sound_speed;
+  p | initial_collapse_stars_instability_parameter;
+  p | initial_collapse_stars_central_particle;
+  p | initial_collapse_stars_central_particle_mass;
 
 #ifdef CONFIG_USE_GRACKLE
   p | initial_grackle_test_minimum_H_number_density;
@@ -1009,6 +1027,27 @@ void EnzoConfig::read(Parameters * p) throw()
     p->value_logical("Initial:shu_collapse:central_particle",false);
   initial_shu_collapse_central_particle_mass =
     p->value_float("Initial:shu_collapse:central_particle_mass",0.0);
+
+   // CollapseStars initialization
+  for (int i=0; i<3; i++) {
+    initial_collapse_stars_centre[i] =
+      p->list_value_float(i,"Initial:collapse_stars:centre",0.0);
+  }
+  for (int i=0; i<3; i++) {
+    initial_collapse_stars_drift_velocity[i] =
+      p->list_value_float(i,"Initial:collapse_stars:drift_velocity",0.0);
+  }
+  initial_collapse_stars_truncation_radius =
+    p->value_float("Initial:collapse_stars:truncation_radius",0.0);
+  initial_collapse_stars_instability_parameter =
+    p->value_float("Initial:collapse_stars:instability_parameter",1.0);
+  initial_collapse_stars_sound_speed =
+    p->value_float("Initial:collapse_stars:sound_speed",1.0);
+  initial_collapse_stars_central_particle =
+    p->value_logical("Initial:collapse_stars:central_particle",false);
+  initial_collapse_stars_central_particle_mass =
+    p->value_float("Initial:collapse_stars:central_particle_mass",0.0);
+
   // Grackle test initialization
 #ifdef CONFIG_USE_GRACKLE
   initial_grackle_test_minimum_H_number_density =

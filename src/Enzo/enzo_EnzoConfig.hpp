@@ -170,6 +170,13 @@ public: // interface
       initial_shu_collapse_instability_parameter(0.0),
       initial_shu_collapse_central_particle(false),
       initial_shu_collapse_central_particle_mass(0.0),
+
+      // EnzoInitialCollapseStars
+      initial_collapse_stars_truncation_radius(0.0),
+      initial_collapse_stars_sound_speed(0.0),
+      initial_collapse_stars_instability_parameter(0.0),
+      initial_collapse_stars_central_particle(false),
+      initial_collapse_stars_central_particle_mass(0.0),
       // EnzoGrackleTest
 #ifdef CONFIG_USE_GRACKLE
       initial_grackle_test_maximum_H_number_density(1000.0),
@@ -409,6 +416,8 @@ public: // interface
       initial_collapse_array[axis] = 0;
       initial_shu_collapse_centre[axis] = 0.0;
       initial_shu_collapse_drift_velocity[axis] = 0.0;
+      initial_collapse_stars_centre[axis] = 0.0;
+      initial_collapse_stars_drift_velocity[axis] = 0.0;
       initial_IG_center_position[axis] = 0.5;
       initial_IG_bfield[axis]         = 0.0;
       method_background_acceleration_center[axis] = 0.5;
@@ -510,7 +519,16 @@ public: // attributes
   double                     initial_shu_collapse_sound_speed;
   bool                       initial_shu_collapse_central_particle;
   double                     initial_shu_collapse_central_particle_mass;
-  
+
+  /// EnzoInitialCollapseStars
+  double                     initial_collapse_stars_centre[3];
+  double                     initial_collapse_stars_drift_velocity[3];
+  double                     initial_collapse_stars_truncation_radius;
+  double                     initial_collapse_stars_instability_parameter;
+  double                     initial_collapse_stars_sound_speed;
+  bool                       initial_collapse_stars_central_particle;
+  double                     initial_collapse_stars_central_particle_mass;
+
   /// EnzoGrackleTest
 #ifdef CONFIG_USE_GRACKLE
   double                     initial_grackle_test_maximum_H_number_density;

@@ -50,7 +50,8 @@ module enzo {
   PUPable EnzoInitialBCenter;
   PUPable EnzoInitialCloud;
   PUPable EnzoInitialCollapse;
-  PUPable EnzoInitialShuCollapse;			
+  PUPable EnzoInitialShuCollapse;
+  PUPable EnzoInitialCollapseStars;					
   PUPable EnzoInitialCosmology;
   PUPable EnzoInitialFeedbackTest;
   PUPable EnzoInitialInclinedWave;

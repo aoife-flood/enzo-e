@@ -169,6 +169,8 @@ Initial * EnzoProblem::create_initial_
 
   } else if (type == "shu_collapse") {
     initial = new EnzoInitialShuCollapse(enzo_config);
+  } else if (type == "collapse_stars") {
+    initial = new EnzoInitialCollapseStars(enzo_config);
   } else if (type == "cosmology") {
     initial = new EnzoInitialCosmology
       (cycle,time,
