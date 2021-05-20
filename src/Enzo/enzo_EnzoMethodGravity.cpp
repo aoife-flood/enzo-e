@@ -242,10 +242,6 @@ void EnzoMethodGravity::compute_accelerations (EnzoBlock * enzo_block) throw()
   enzo_float * de_t = (enzo_float*) field.values("density_total");
   if (de_t) for (int i=0; i<m; i++) de_t[i] = 0.0;
 
-  //  if (potential) {
-  //  for (int i=0; i<m; i++) potential[i] = 0.0;
-  // }
-
 }
 
 //----------------------------------------------------------------------
@@ -319,6 +315,5 @@ double EnzoMethodGravity::timestep_ (Block * block) const throw()
       }
     }
   }
-  //CkPrintf("Gravity timestep = %g\n", 0.5*dt);
   return 0.5*dt;
 }
