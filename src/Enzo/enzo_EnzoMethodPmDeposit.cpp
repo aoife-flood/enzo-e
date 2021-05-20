@@ -194,12 +194,9 @@ void EnzoMethodPmDeposit::compute ( Block * block) throw()
 
       // Accumulated single velocity array for Baryon deposit
 
-      CkPrintf("Number of Batches = %d \n",particle.num_batches(it));
-
       for (int ib=0; ib<particle.num_batches(it); ib++) {
 
         int np = particle.num_particles(it,ib);
-	CkPrintf("Number of star Particles = %d \n",np);
         // Find the mass of each particle. If cosntant generate array of
         // constant values in order to simply code below
         enzo_float * pmass = NULL;
