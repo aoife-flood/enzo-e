@@ -99,6 +99,7 @@ module enzo {
   PUPable EnzoMethodPpml;
   PUPable EnzoMethodTurbulence;
   PUPable EnzoMethodMHDVlct;
+  PUPable EnzoBfieldMethodCT;
   PUPable EnzoMethodStarMaker;
   PUPable EnzoMethodStarMakerStochasticSF;
   PUPable EnzoMethodStarMakerSmartStar;
