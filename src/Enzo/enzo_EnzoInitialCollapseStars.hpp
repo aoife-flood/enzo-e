@@ -19,11 +19,7 @@ public: // interface
   /// CHARM++ constructor
   EnzoInitialCollapseStars() throw()
   : Initial (),
-    truncation_radius_(0.0),
-    sound_speed_(0.0),
-    instability_parameter_(0.0),
-    central_particle_(false),
-    central_particle_mass_(0.0)
+    truncation_radius_(0.0)
   {
   }    
 
@@ -36,11 +32,7 @@ public: // interface
   /// CHARM++ migration constructor
   EnzoInitialCollapseStars(CkMigrateMessage *m)
     : Initial (m),
-      truncation_radius_(0.0),
-      sound_speed_(0.0),
-      instability_parameter_(0.0),
-      central_particle_(false),
-      central_particle_mass_(0.0)
+      truncation_radius_(0.0)
   {
   }
 
@@ -63,22 +55,14 @@ public: // interface
   /// Truncation radius - must be less than half the total domain width
   double truncation_radius_;
 
-  /// Sound speed of the gas - internal energy calculated from this
-  double sound_speed_;
+  /// Total mass of the whole sphere of stars
+  double total_mass_;
 
-  /// Instability parameter as defined in Shu 1977
-  double instability_parameter_;
+  /// The expected fraction of cells containing a star particle
+  double particle_fraction_;
 
-  /// Is there are star particle initialised at the centre of collapse?
-  bool central_particle_;
-
-  /// Mass of the central particle
-  double central_particle_mass_;
-
-  /// Physics variables we store as attribrutes for convenience
-  double gamma_;
-  double ggm1_;
-  double grav_constant_internal_units_;
+  /// The random seed used to choose the cells hosting a star particle
+  double random_seed_;
 };
 
 #endif /* ENZO_ENZO_INITIAL_COLLAPSE_HPP */

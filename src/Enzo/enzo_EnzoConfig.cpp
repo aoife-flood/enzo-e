@@ -81,10 +81,8 @@ EnzoConfig::EnzoConfig() throw ()
 
   // EnzoInitialCollapseStars
   initial_collapse_stars_truncation_radius(0.0),
-  initial_collapse_stars_sound_speed(0.0),
-  initial_collapse_stars_instability_parameter(0.0),
-  initial_collapse_stars_central_particle(false),
-  initial_collapse_stars_central_particle_mass(0.0),
+  initial_collapse_stars_total_mass(0.0),
+  initial_collapse_stars_random_seed(123),
   
   // EnzoInitialGrackleTest
 #ifdef CONFIG_USE_GRACKLE
@@ -431,10 +429,8 @@ void EnzoConfig::pup (PUP::er &p)
   PUParray(p,initial_collapse_stars_centre,3);
   PUParray(p,initial_collapse_stars_drift_velocity,3);
   p | initial_collapse_stars_truncation_radius;
-  p | initial_collapse_stars_sound_speed;
-  p | initial_collapse_stars_instability_parameter;
-  p | initial_collapse_stars_central_particle;
-  p | initial_collapse_stars_central_particle_mass;
+  p | initial_collapse_stars_total_mass;
+  p | initial_collapse_stars_random_seed;
 
 #ifdef CONFIG_USE_GRACKLE
   p | initial_grackle_test_minimum_H_number_density;
@@ -1039,14 +1035,12 @@ void EnzoConfig::read(Parameters * p) throw()
   }
   initial_collapse_stars_truncation_radius =
     p->value_float("Initial:collapse_stars:truncation_radius",0.0);
-  initial_collapse_stars_instability_parameter =
-    p->value_float("Initial:collapse_stars:instability_parameter",1.0);
-  initial_collapse_stars_sound_speed =
-    p->value_float("Initial:collapse_stars:sound_speed",1.0);
-  initial_collapse_stars_central_particle =
-    p->value_logical("Initial:collapse_stars:central_particle",false);
-  initial_collapse_stars_central_particle_mass =
-    p->value_float("Initial:collapse_stars:central_particle_mass",0.0);
+  initial_collapse_stars_total_mass =
+    p->value_float("Initial:collapse_stars:total_mass",0.0);
+  initial_collapse_stars_particle_fraction =
+    p->value_float("Initial:collapse_stars:particle_fraction",0.0);
+  initial_collapse_stars_random_seed =
+    p->value_float("Initial:collapse_stars:random_seed",123);
 
   // Grackle test initialization
 #ifdef CONFIG_USE_GRACKLE

@@ -26,20 +26,9 @@ EnzoInitialCollapseStars::EnzoInitialCollapseStars
   drift_velocity_[2] = enzo_config->initial_collapse_stars_drift_velocity[2];
     
   truncation_radius_ = enzo_config->initial_collapse_stars_truncation_radius;
-  sound_speed_ = enzo_config->initial_collapse_stars_sound_speed;
-  instability_parameter_ = enzo_config->initial_collapse_stars_instability_parameter;
-  central_particle_ = enzo_config->initial_collapse_stars_central_particle;
-  central_particle_mass_ = enzo_config->initial_collapse_stars_central_particle_mass;
-  
-  // Get physics attributes
-  gamma_ = enzo_config->field_gamma;
-  ggm1_ = gamma_ * (gamma_ - 1.0);
-  grav_constant_internal_units_ =
-    cello::grav_constant * enzo_units->mass() *
-    enzo_units->time() * enzo_units->time() /
-    (enzo_units->length() * enzo_units->length() *
-     enzo_units->length());
-
+  total_mass_ = enzo_config->initial_collapse_stars_total_mass;
+  particle_fraction_ = enzo_config->initial_collapse_stars_particle_fraction;
+  random_seed_ = enzo_config->initial_collapse_stars_random_seed;
 }
 
 void EnzoInitialCollapseStars::pup (PUP::er &p)
@@ -53,10 +42,8 @@ void EnzoInitialCollapseStars::pup (PUP::er &p)
   PUParray(p,centre_,3);
   PUParray(p,drift_velocity_,3);
   p | truncation_radius_;
-  p | sound_speed_;
-  p | instability_parameter_;
-  p | central_particle_;
-  
+  p | total_mass_;
+  p | particle_fraction_;
 }
 
 void EnzoInitialCollapseStars::enforce_block
@@ -72,19 +59,20 @@ void EnzoInitialCollapseStars::enforce_block
   // Check we have sensible parameters
   // First check if rank = 3
   ASSERT("EnzoInitialCollapseStars::EnzoInitialCollapseStars()",
-	 "Cannot run Shu Collapse with rank < 3",cello::rank() == 3);
+	 "Cannot run CollapseStars with rank < 3",cello::rank() == 3);
 
   // Check we are in unigrid mode
   ASSERT("EnzoInitialCollapseStars::EnzoInitialCollapseStars()",
-	 "Shu Collapse requires unigrid mode (Adapt : max_level = 0). ",
+	 "CollapseStars requires unigrid mode (Adapt : max_level = 0). ",
 	 enzo_config->mesh_max_level == 0);
 
 
   // Check if we have periodic boundary conditions
-  int px,py,pz;
-  hierarchy->get_periodicity(&px,&py,&pz);
+  int periodic_x,periodic_y,periodic_z;
+  hierarchy->get_periodicity(&periodic_x,&periodic_y,&periodic_z);
   ASSERT("EnzoInitialCollapseStars::EnzoInitialCollapseStars()",
-	 "Shu Collapse must have periodic boundary conditions",px && py && pz);
+	 "CollapseStars must have periodic boundary conditions",
+	 periodic_x && periodic_y && periodic_z);
 
   // Check if the truncation radius is less than half the domain size
   double dxm,dxp,dym,dyp,dzm,dzp;
@@ -102,18 +90,6 @@ void EnzoInitialCollapseStars::enforce_block
 	   (truncation_radius_ < 0.5 * domain_width_y) &&
 	   (truncation_radius_ < 0.5 * domain_width_z));
 
-  // If we have a central particle, need to have star formation turned off
-  if (central_particle_){
-    const int num_methods = enzo_config->num_method;
-    bool star_maker_on = false;
-    for (int i = 0; i < num_methods; i++){
-      if (enzo_config->method_list[i] == "star_maker"){
-	ERROR("EnzoInitialCollapseStars::EnzoInitialCollapseStars()",
-	      "If central_particle = true, then cannot have star_maker method");
-      }
-    }
-  }
-
   // TODO: Check required fields?
 
   double folded_centre_position[3];
@@ -122,7 +98,6 @@ void EnzoInitialCollapseStars::enforce_block
   centre_[0] = folded_centre_position[0];
   centre_[1] = folded_centre_position[1];
   centre_[2] = folded_centre_position[2];
-
 
   Field field = block->data()->field();
 
@@ -147,24 +122,16 @@ void EnzoInitialCollapseStars::enforce_block
 		   bzm,bzp,&hz);
 
   // Get pointers to fields
-  enzo_float *  d = (enzo_float *) field.values ("density");
   enzo_float * dt = (enzo_float *) field.values ("density_total");
-  enzo_float *  p = (enzo_float *) field.values ("pressure");
   enzo_float * po = (enzo_float *) field.values ("potential");
-  enzo_float * te = (enzo_float *) field.values ("total_energy");
-  enzo_float * ie = (enzo_float *) field.values ("internal_energy");
   enzo_float * ax = (enzo_float *) field.values ("acceleration_x");
   enzo_float * ay = (enzo_float *) field.values ("acceleration_y");
   enzo_float * az = (enzo_float *) field.values ("acceleration_z");
-  enzo_float * vx = (enzo_float *) field.values ("velocity_x");
-  enzo_float * vy = (enzo_float *) field.values ("velocity_y");
-  enzo_float * vz = (enzo_float *) field.values ("velocity_z");
   enzo_float *  x = (enzo_float *) field.values ("X");
   enzo_float *  b = (enzo_float *) field.values ("B");
 
   // For some of the fields, we initialise their values to zero
   std::fill_n(dt,m,0.0);
-  std::fill_n(p,m,0.0);
   std::fill_n(po,m,0.0);
   std::fill_n(ax,m,0.0);
   std::fill_n(ay,m,0.0);
@@ -172,35 +139,61 @@ void EnzoInitialCollapseStars::enforce_block
   std::fill_n(x,m,0.0);
   std::fill_n(b,m,0.0);
 
-  // Set specific internal energy
-  const enzo_float ie_value = sound_speed_ * sound_speed_ / ggm1_;
-  std::fill_n(ie,m,ie_value);
+  ParticleDescr * particle_descr = cello::particle_descr();
+  Particle particle              = block->data()->particle();
+  
+  // Attribute indices
+  const int it   = particle.type_index("star");
+  const int ia_m = particle.attribute_index (it, "mass");
+  const int ia_x = particle.attribute_index (it, "x");
+  const int ia_y = particle.attribute_index (it, "y");
+  const int ia_z = particle.attribute_index (it, "z");
+  const int ia_vx = particle.attribute_index (it, "vx");
+  const int ia_vy = particle.attribute_index (it, "vy");
+  const int ia_vz = particle.attribute_index (it, "vz");
+  const int ia_copy = particle.attribute_index (it, "is_copy");
+  
+  // Attribrute stride lengths
+  const int dm   = particle.stride(it, ia_m);
+  const int dp   = particle.stride(it, ia_x);
+  const int dv   = particle.stride(it, ia_vx);
+  const int dloc = particle.stride(it, ia_copy);
+  
+  /// Initialise pointers for particle attribute arrays
+  enzo_float * pmass = 0;
+  enzo_float * px   = 0;
+  enzo_float * py   = 0;
+  enzo_float * pz   = 0;
+  enzo_float * pvx  = 0;
+  enzo_float * pvy  = 0;
+  enzo_float * pvz  = 0;
+  int64_t * is_copy = 0;
+      
+      
+  // Set random seed
+  srand(random_seed_);
 
-  // Set velocity
-  std::fill_n(vx,m,drift_velocity_[0]);
-  std::fill_n(vy,m,drift_velocity_[1]);
-  std::fill_n(vz,m,drift_velocity_[2]);
 
-  // Set total energy
-  const enzo_float ke = 0.5 * (drift_velocity_[0] * drift_velocity_[0] +
-			       drift_velocity_[1] * drift_velocity_[1] +
-			       drift_velocity_[2] * drift_velocity_[2]);
+  // Compute the mass of each star particle
 
-  const enzo_float te_value = ke + ie_value;
-  std::fill_n(te,m,te_value);
+  const double total_volume = 4./3. * cello::pi * truncation_radius_ *
+    truncation_radius_ * truncation_radius_;
 
-  // Now to initialise the density field
-  const double density_profile_factor =
-    instability_parameter_ *
-    sound_speed_ * sound_speed_ /
-    (4.0 * cello::pi * grav_constant_internal_units_);
+  const double cell_volume = hx*hy*hz;
 
-  for (int iz = 0; iz < mz ; iz++){
-    const double z = bzm + (iz - gz + 0.5)*hz;
-    for (int iy = 0; iy < my; iy++){
-      const double y = bym + (iy - gy + 0.5)*hy;
-      for (int ix = 0; ix < mx; ix++){
-	const double x = bxm + (ix - gx + 0.5)*hx;
+  const double particle_mass = total_mass_ * cell_volume /
+    (particle_fraction_ * total_volume);
+
+  // Loop over active cells
+
+  for (int iz = gz; iz < gz + nz; iz++){
+    const double z = bzm + (iz + 0.5)*hz;
+    for (int iy = gy; iy < gy + ny; iy++){
+      const double y = bym + (iy + 0.5)*hy;
+      for (int ix = gx; ix < gx + nx; ix++){
+	const double x = bxm + (ix + 0.5)*hx;
+
+	// Check if within the truncation radius
 	double cell_pos[3] = {x,y,z};
 	double npi[3];
 	hierarchy->get_nearest_periodic_image(cell_pos,centre_,npi);
@@ -208,76 +201,40 @@ void EnzoInitialCollapseStars::enforce_block
 	  (npi[0] - centre_[0]) * (npi[0] - centre_[0]) +
 	  (npi[1] - centre_[1]) * (npi[1] - centre_[1]) +
 	  (npi[2] - centre_[2]) * (npi[2] - centre_[2]);
-	const int i = INDEX(ix,iy,iz,mx,my);
-	d[i] =
-	  (r2 < truncation_radius_ * truncation_radius_) ?
-	  density_profile_factor / r2 :
-	  density_profile_factor / (truncation_radius_ * truncation_radius_);	      
-      } //ix
-    } //iy
-  } //iz
 
-  // If central_particle is true and collapse centre is in this block, we
-  // add a particle at the collapse centre
-  if (central_particle_ &&
-      block->check_position_in_block(centre_[0],centre_[1],centre_[2]))
-    {
-    
-      ParticleDescr * particle_descr = cello::particle_descr();
-      Particle particle              = block->data()->particle();
-
-      // Attribute indices
-      const int it   = particle.type_index("star");
-      const int ia_m = particle.attribute_index (it, "mass");
-      const int ia_x = particle.attribute_index (it, "x");
-      const int ia_y = particle.attribute_index (it, "y");
-      const int ia_z = particle.attribute_index (it, "z");
-      const int ia_vx = particle.attribute_index (it, "vx");
-      const int ia_vy = particle.attribute_index (it, "vy");
-      const int ia_vz = particle.attribute_index (it, "vz");
-      const int ia_loc = particle.attribute_index (it, "is_local");
-
-      // Attribrute stride lengths
-      const int dm   = particle.stride(it, ia_m);
-      const int dp   = particle.stride(it, ia_x);
-      const int dv   = particle.stride(it, ia_vx);
-      const int dloc = particle.stride(it, ia_loc);
-  
-      /// Initialise pointers for particle attribute arrays
-      enzo_float * pmass = 0;
-      enzo_float * px   = 0;
-      enzo_float * py   = 0;
-      enzo_float * pz   = 0;
-      enzo_float * pvx  = 0;
-      enzo_float * pvy  = 0;
-      enzo_float * pvz  = 0;
-      int64_t * is_local = 0;
-     
-      // insert particle
-      int ib,ipp  = 0;
-      const int new_particle = particle.insert_particles(it, 1);
-      particle.index(new_particle,&ib,&ipp);
-
-      // Get pointers to particle attribute arrays
-      pmass = (enzo_float *) particle.attribute_array(it, ia_m, ib);
-      px    = (enzo_float *) particle.attribute_array(it, ia_x, ib);
-      py    = (enzo_float *) particle.attribute_array(it, ia_y, ib);
-      pz    = (enzo_float *) particle.attribute_array(it, ia_z, ib);
-      pvx   = (enzo_float *) particle.attribute_array(it, ia_vx, ib);
-      pvy   = (enzo_float *) particle.attribute_array(it, ia_vy, ib);
-      pvz   = (enzo_float *) particle.attribute_array(it, ia_vz, ib);
-      is_local   = (int64_t *) particle.attribute_array(it, ia_loc, ib);
-
-      // Now assign values to attributes
-      pmass[ipp*dm] = central_particle_mass_;
-      px[ipp*dp] = centre_[0];
-      py[ipp*dp] = centre_[1];
-      pz[ipp*dp] = centre_[2];
-      pvx[ipp*dp] = drift_velocity_[0];
-      pvy[ipp*dp] = drift_velocity_[1];
-      pvz[ipp*dp] = drift_velocity_[2];
-      is_local[ipp*dloc] = 1;
-
-    } // Is there are central particle to place in this block?
+	if (r2 < truncation_radius_ * truncation_radius_){
+	  double rnum = (double(rand())) / (double(RAND_MAX));
+	  if (rnum < particle_fraction_){
+	    // insert particle
+	    int ib,ipp  = 0;
+	    const int new_particle = particle.insert_particles(it, 1);
+	    particle.index(new_particle,&ib,&ipp);
+	    
+	    // Get pointers to particle attribute arrays
+	    pmass = (enzo_float *) particle.attribute_array(it, ia_m, ib);
+	    px    = (enzo_float *) particle.attribute_array(it, ia_x, ib);
+	    py    = (enzo_float *) particle.attribute_array(it, ia_y, ib);
+	    pz    = (enzo_float *) particle.attribute_array(it, ia_z, ib);
+	    pvx   = (enzo_float *) particle.attribute_array(it, ia_vx, ib);
+	    pvy   = (enzo_float *) particle.attribute_array(it, ia_vy, ib);
+	    pvz   = (enzo_float *) particle.attribute_array(it, ia_vz, ib);
+	    is_copy   = (int64_t *) particle.attribute_array(it, ia_copy, ib);
+	    
+	    // Now assign values to attributes
+	    pmass[ipp*dm] = particle_mass;
+	    px[ipp*dp] = x;
+	    py[ipp*dp] = y;
+	    pz[ipp*dp] = z;
+	    pvx[ipp*dp] = drift_velocity_[0];
+	    pvy[ipp*dp] = drift_velocity_[1];
+	    pvz[ipp*dp] = drift_velocity_[2];
+	    is_copy[ipp*dloc] = 0;
+	    
+	  } // if rnum < particle_fraction
+	} // if r2 < truncation_radius * truncation_radius
+	
+      } // ix
+    } // iy
+  } // iz
   return;
 }

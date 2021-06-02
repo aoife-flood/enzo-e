@@ -173,10 +173,9 @@ public: // interface
 
       // EnzoInitialCollapseStars
       initial_collapse_stars_truncation_radius(0.0),
-      initial_collapse_stars_sound_speed(0.0),
-      initial_collapse_stars_instability_parameter(0.0),
-      initial_collapse_stars_central_particle(false),
-      initial_collapse_stars_central_particle_mass(0.0),
+      initial_collapse_stars_total_mass(0.0),
+      initial_collapse_stars_random_seed(123),
+      
       // EnzoGrackleTest
 #ifdef CONFIG_USE_GRACKLE
       initial_grackle_test_maximum_H_number_density(1000.0),
@@ -524,10 +523,9 @@ public: // attributes
   double                     initial_collapse_stars_centre[3];
   double                     initial_collapse_stars_drift_velocity[3];
   double                     initial_collapse_stars_truncation_radius;
-  double                     initial_collapse_stars_instability_parameter;
-  double                     initial_collapse_stars_sound_speed;
-  bool                       initial_collapse_stars_central_particle;
-  double                     initial_collapse_stars_central_particle_mass;
+  double                     initial_collapse_stars_total_mass;
+  double                     initial_collapse_stars_particle_fraction;
+  int                        initial_collapse_stars_random_seed;
 
   /// EnzoGrackleTest
 #ifdef CONFIG_USE_GRACKLE
