@@ -81,7 +81,7 @@ EnzoConfig::EnzoConfig() throw ()
 
   // EnzoInitialCollapseStars
   initial_collapse_stars_truncation_radius(0.0),
-  initial_collapse_stars_total_mass(0.0),
+  initial_collapse_stars_density(0.0),
   initial_collapse_stars_random_seed(123),
   
   // EnzoInitialGrackleTest
@@ -244,10 +244,10 @@ EnzoConfig::EnzoConfig() throw ()
   method_star_maker_jeans_density_factor(0.25),
 
   // EnzoMethodMergeStars
-  method_merge_stars_merging_radius_cells(8),
+  method_merge_stars_merging_radius_cells(8.0),
   // EnzoMethodAccretion
   method_accretion_prescription(0),    
-  method_accretion_kernel_radius_cells(4),
+  method_accretion_kernel_radius_cells(4.0),
   // EnzoMethodTurbulence
   method_turbulence_edot(0.0),
   method_turbulence_mach_number(0.0),
@@ -429,7 +429,7 @@ void EnzoConfig::pup (PUP::er &p)
   PUParray(p,initial_collapse_stars_centre,3);
   PUParray(p,initial_collapse_stars_drift_velocity,3);
   p | initial_collapse_stars_truncation_radius;
-  p | initial_collapse_stars_total_mass;
+  p | initial_collapse_stars_density;
   p | initial_collapse_stars_random_seed;
 
 #ifdef CONFIG_USE_GRACKLE
@@ -1035,10 +1035,8 @@ void EnzoConfig::read(Parameters * p) throw()
   }
   initial_collapse_stars_truncation_radius =
     p->value_float("Initial:collapse_stars:truncation_radius",0.0);
-  initial_collapse_stars_total_mass =
-    p->value_float("Initial:collapse_stars:total_mass",0.0);
-  initial_collapse_stars_particle_fraction =
-    p->value_float("Initial:collapse_stars:particle_fraction",0.0);
+  initial_collapse_stars_density =
+    p->value_float("Initial:collapse_stars:density",0.0);
   initial_collapse_stars_random_seed =
     p->value_float("Initial:collapse_stars:random_seed",123);
 
@@ -1285,11 +1283,11 @@ void EnzoConfig::read(Parameters * p) throw()
   method_null_dt = p->value_float
     ("Method:null:dt",std::numeric_limits<double>::max());
 
-  method_merge_stars_merging_radius_cells = p->value_integer
-    ("Method:merge_stars:merging_radius_cells",8);
+  method_merge_stars_merging_radius_cells = p->value_float
+    ("Method:merge_stars:merging_radius_cells",8.0);
   
-  method_accretion_kernel_radius_cells = p->value_integer
-    ("Method:accretion:kernel_radius_cells",4);
+  method_accretion_kernel_radius_cells = p->value_float
+    ("Method:accretion:kernel_radius_cells",4.0);
 
   method_accretion_prescription = p->value_integer
     ("Method:accretion:prescription",0);

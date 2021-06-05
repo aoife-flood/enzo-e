@@ -65,7 +65,7 @@ protected: // methods
   
 protected: // attributes
 
-  int merging_radius_cells_;
+  double merging_radius_cells_;
 };
 
 #endif /* EnzoMethodMergeStars */

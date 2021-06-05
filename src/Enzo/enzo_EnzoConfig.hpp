@@ -173,7 +173,7 @@ public: // interface
 
       // EnzoInitialCollapseStars
       initial_collapse_stars_truncation_radius(0.0),
-      initial_collapse_stars_total_mass(0.0),
+      initial_collapse_stars_density(0.0),
       initial_collapse_stars_random_seed(123),
       
       // EnzoGrackleTest
@@ -338,10 +338,10 @@ public: // interface
       method_star_maker_control_volume_cells_max(4),
       
       // EnzoMethodMergeStars
-      method_merge_stars_merging_radius_cells(8),
+      method_merge_stars_merging_radius_cells(8.0),
       // EnzoMethodAccretion
       method_accretion_prescription(0),
-      method_accretion_kernel_radius_cells(4),
+      method_accretion_kernel_radius_cells(4.0),
       // EnzoMethodNull
       method_null_dt(0.0),
       // EnzoMethodTurbulence
@@ -523,8 +523,7 @@ public: // attributes
   double                     initial_collapse_stars_centre[3];
   double                     initial_collapse_stars_drift_velocity[3];
   double                     initial_collapse_stars_truncation_radius;
-  double                     initial_collapse_stars_total_mass;
-  double                     initial_collapse_stars_particle_fraction;
+  double                     initial_collapse_stars_density;
   int                        initial_collapse_stars_random_seed;
 
   /// EnzoGrackleTest
@@ -718,11 +717,11 @@ public: // attributes
 
   
   /// EnzoMethodMergeStars
-  int                       method_merge_stars_merging_radius_cells;
+  double                    method_merge_stars_merging_radius_cells;
   
   /// EnzoMethodAccretion
   int                       method_accretion_prescription;
-  int                       method_accretion_kernel_radius_cells;
+  double                    method_accretion_kernel_radius_cells;
 
   /// EnzoMethodNull
   double                     method_null_dt;
