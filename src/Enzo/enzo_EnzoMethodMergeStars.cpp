@@ -28,17 +28,21 @@ EnzoMethodMergeStars::EnzoMethodMergeStars()
 	 "star particles or neighbouring such a block is at highest refinement "
 	 "level", enzo_config->mesh_max_level == 0);
 
-  // Merging radius is in units of the cell width. Must be at least twice the
-  // accretion kernel radius (assumes accretion method is activated, may change this
-  // in the future)
+  // Merging radius is in units of the cell width. 
   merging_radius_cells_ = enzo_config->method_merge_stars_merging_radius_cells;
 
-  ASSERT("EnzoMethodMergeStars::EnzoMethodMergeStars() ",
-	 "merging_radius_cells_ must be at least twice the accretion radius "
-	 "in order to ensure that accretion zones do not overlap",
-         merging_radius_cells_ >=
-	 2 * enzo_config->method_accretion_kernel_radius_cells);
-
+  // If accretion is turned on, have to check if the merging radius is at least
+  // twice the accretion kernel radius
+  for (int i = 0; i < enzo_config->num_method; i++){
+    if (enzo_config->method_list[i] == "accretion"){
+      ASSERT("EnzoMethodMergeStars::EnzoMethodMergeStars() ",
+	     "merging_radius_cells_ must be at least twice the accretion radius "
+	     "in order to ensure that accretion zones do not overlap",
+	     merging_radius_cells_ >=
+	     2 * enzo_config->method_accretion_kernel_radius_cells);
+    }
+  }
+  
   // Refresh copies all star particles from neighbouring blocks
   cello::simulation()->new_refresh_set_name(ir_post_,name());
   Refresh * refresh = cello::refresh(ir_post_);
