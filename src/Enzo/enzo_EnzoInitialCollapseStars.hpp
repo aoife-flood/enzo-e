@@ -55,11 +55,8 @@ public: // interface
   /// Truncation radius - must be less than half the total domain width
   double truncation_radius_;
 
-  /// Total mass of the whole sphere of stars
-  double total_mass_;
-
-  /// The expected fraction of cells containing a star particle
-  double particle_fraction_;
+  /// Mass density of the sphere
+  double density_;
 
   /// The random seed used to choose the cells hosting a star particle
   double random_seed_;

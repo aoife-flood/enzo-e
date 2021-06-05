@@ -1,6 +1,6 @@
 // See LICENSE_CELLO file for license and copyright information
 
-/// @file     enzo_EnzoInitialShuCollapse.cpp
+/// @file     enzo_EnzoInitialCollapseStars.cpp
 /// @author   Stefan Arridge (stefan.arridge@gmail.com)
 /// @date     2021-03-22
 /// @brief    [\ref Enzo] Initial conditions for a uniform density sphere of stars
@@ -26,8 +26,7 @@ EnzoInitialCollapseStars::EnzoInitialCollapseStars
   drift_velocity_[2] = enzo_config->initial_collapse_stars_drift_velocity[2];
     
   truncation_radius_ = enzo_config->initial_collapse_stars_truncation_radius;
-  total_mass_ = enzo_config->initial_collapse_stars_total_mass;
-  particle_fraction_ = enzo_config->initial_collapse_stars_particle_fraction;
+  density_ = enzo_config->initial_collapse_stars_density;
   random_seed_ = enzo_config->initial_collapse_stars_random_seed;
 }
 
@@ -42,8 +41,8 @@ void EnzoInitialCollapseStars::pup (PUP::er &p)
   PUParray(p,centre_,3);
   PUParray(p,drift_velocity_,3);
   p | truncation_radius_;
-  p | total_mass_;
-  p | particle_fraction_;
+  p | density_;
+  p | random_seed_;
 }
 
 void EnzoInitialCollapseStars::enforce_block
@@ -84,12 +83,12 @@ void EnzoInitialCollapseStars::enforce_block
   
   
   ASSERT("EnzoInitialCollapseStars::EnzoInitialCollapseStars()",
-	   "Truncation radius must be less than half the domain width in all "
-	   "dimensions",
-	   (truncation_radius_ < 0.5 * domain_width_x) &&
-	   (truncation_radius_ < 0.5 * domain_width_y) &&
-	   (truncation_radius_ < 0.5 * domain_width_z));
-
+	 "Truncation radius must be less than half the domain width in all "
+	 "dimensions",
+	 (truncation_radius_ < 0.5 * domain_width_x) &&
+	 (truncation_radius_ < 0.5 * domain_width_y) &&
+	 (truncation_radius_ < 0.5 * domain_width_z));
+  
   // TODO: Check required fields?
 
   double folded_centre_position[3];
@@ -121,78 +120,18 @@ void EnzoInitialCollapseStars::enforce_block
 		   bym,byp,&hy,
 		   bzm,bzp,&hz);
 
-  // Get pointers to fields
-  enzo_float * dt = (enzo_float *) field.values ("density_total");
-  enzo_float * po = (enzo_float *) field.values ("potential");
-  enzo_float * ax = (enzo_float *) field.values ("acceleration_x");
-  enzo_float * ay = (enzo_float *) field.values ("acceleration_y");
-  enzo_float * az = (enzo_float *) field.values ("acceleration_z");
-  enzo_float *  x = (enzo_float *) field.values ("X");
-  enzo_float *  b = (enzo_float *) field.values ("B");
+  // Mask for whether cells contain a particle
+  bool * mask = new bool[nx*ny*nz];
 
-  // For some of the fields, we initialise their values to zero
-  std::fill_n(dt,m,0.0);
-  std::fill_n(po,m,0.0);
-  std::fill_n(ax,m,0.0);
-  std::fill_n(ay,m,0.0);
-  std::fill_n(az,m,0.0);
-  std::fill_n(x,m,0.0);
-  std::fill_n(b,m,0.0);
-
-  ParticleDescr * particle_descr = cello::particle_descr();
-  Particle particle              = block->data()->particle();
-  
-  // Attribute indices
-  const int it   = particle.type_index("star");
-  const int ia_m = particle.attribute_index (it, "mass");
-  const int ia_x = particle.attribute_index (it, "x");
-  const int ia_y = particle.attribute_index (it, "y");
-  const int ia_z = particle.attribute_index (it, "z");
-  const int ia_vx = particle.attribute_index (it, "vx");
-  const int ia_vy = particle.attribute_index (it, "vy");
-  const int ia_vz = particle.attribute_index (it, "vz");
-  const int ia_copy = particle.attribute_index (it, "is_copy");
-  
-  // Attribrute stride lengths
-  const int dm   = particle.stride(it, ia_m);
-  const int dp   = particle.stride(it, ia_x);
-  const int dv   = particle.stride(it, ia_vx);
-  const int dloc = particle.stride(it, ia_copy);
-  
-  /// Initialise pointers for particle attribute arrays
-  enzo_float * pmass = 0;
-  enzo_float * px   = 0;
-  enzo_float * py   = 0;
-  enzo_float * pz   = 0;
-  enzo_float * pvx  = 0;
-  enzo_float * pvy  = 0;
-  enzo_float * pvz  = 0;
-  int64_t * is_copy = 0;
-      
-      
-  // Set random seed
-  srand(random_seed_);
-
-
-  // Compute the mass of each star particle
-
-  const double total_volume = 4./3. * cello::pi * truncation_radius_ *
-    truncation_radius_ * truncation_radius_;
-
-  const double cell_volume = hx*hy*hz;
-
-  const double particle_mass = total_mass_ * cell_volume /
-    (particle_fraction_ * total_volume);
-
-  // Loop over active cells
-
-  for (int iz = gz; iz < gz + nz; iz++){
+  // Count number of particles
+  int n_particles = 0;
+  for (int iz = 0; iz < nz; iz++){
     const double z = bzm + (iz + 0.5)*hz;
-    for (int iy = gy; iy < gy + ny; iy++){
+    for (int iy = 0; iy < ny; iy++){
       const double y = bym + (iy + 0.5)*hy;
-      for (int ix = gx; ix < gx + nx; ix++){
+      for (int ix = 0; ix < nx; ix++){
 	const double x = bxm + (ix + 0.5)*hx;
-
+	const int i = ix + nx*(iy + ny*iz);
 	// Check if within the truncation radius
 	double cell_pos[3] = {x,y,z};
 	double npi[3];
@@ -201,40 +140,127 @@ void EnzoInitialCollapseStars::enforce_block
 	  (npi[0] - centre_[0]) * (npi[0] - centre_[0]) +
 	  (npi[1] - centre_[1]) * (npi[1] - centre_[1]) +
 	  (npi[2] - centre_[2]) * (npi[2] - centre_[2]);
-
-	if (r2 < truncation_radius_ * truncation_radius_){
-	  double rnum = (double(rand())) / (double(RAND_MAX));
-	  if (rnum < particle_fraction_){
-	    // insert particle
-	    int ib,ipp  = 0;
-	    const int new_particle = particle.insert_particles(it, 1);
-	    particle.index(new_particle,&ib,&ipp);
-	    
-	    // Get pointers to particle attribute arrays
-	    pmass = (enzo_float *) particle.attribute_array(it, ia_m, ib);
-	    px    = (enzo_float *) particle.attribute_array(it, ia_x, ib);
-	    py    = (enzo_float *) particle.attribute_array(it, ia_y, ib);
-	    pz    = (enzo_float *) particle.attribute_array(it, ia_z, ib);
-	    pvx   = (enzo_float *) particle.attribute_array(it, ia_vx, ib);
-	    pvy   = (enzo_float *) particle.attribute_array(it, ia_vy, ib);
-	    pvz   = (enzo_float *) particle.attribute_array(it, ia_vz, ib);
-	    is_copy   = (int64_t *) particle.attribute_array(it, ia_copy, ib);
-	    
-	    // Now assign values to attributes
-	    pmass[ipp*dm] = particle_mass;
-	    px[ipp*dp] = x;
-	    py[ipp*dp] = y;
-	    pz[ipp*dp] = z;
-	    pvx[ipp*dp] = drift_velocity_[0];
-	    pvy[ipp*dp] = drift_velocity_[1];
-	    pvz[ipp*dp] = drift_velocity_[2];
-	    is_copy[ipp*dloc] = 0;
-	    
-	  } // if rnum < particle_fraction
-	} // if r2 < truncation_radius * truncation_radius
 	
+	if (r2 < truncation_radius_ * truncation_radius_){
+	  mask[i] = true;
+	  n_particles++;
+	}
+	else{
+	  mask[i] = false;
+	}
       } // ix
     } // iy
   } // iz
+
+  if (n_particles > 0){
+    // Insert uninitialised star particles
+    ParticleDescr * particle_descr = cello::particle_descr();
+    Particle particle              = block->data()->particle();
+    
+    const int npb = particle.batch_size();
+    int ib = 0; // batch counter
+    int ipb = 0; // particle / batch counter
+    
+    const int it   = particle.type_index("star");
+    particle.insert_particles(it, n_particles);
+    enzo::simulation()->data_insert_particles(n_particles);
+    
+    // Attribute indices
+    const int ia_m = particle.attribute_index (it, "mass");
+    const int ia_x = particle.attribute_index (it, "x");
+    const int ia_y = particle.attribute_index (it, "y");
+    const int ia_z = particle.attribute_index (it, "z");
+    const int ia_vx = particle.attribute_index (it, "vx");
+    const int ia_vy = particle.attribute_index (it, "vy");
+    const int ia_vz = particle.attribute_index (it, "vz");
+    const int ia_copy = particle.attribute_index (it, "is_copy");
+    
+    // Attribrute stride lengths
+    const int dm   = particle.stride(it, ia_m);
+    const int dp   = particle.stride(it, ia_x);
+    const int dv   = particle.stride(it, ia_vx);
+    const int dloc = particle.stride(it, ia_copy);
+    
+  /// Initialise pointers for particle attribute arrays
+    enzo_float * pmass = 0;
+    enzo_float * px   = 0;
+    enzo_float * py   = 0;
+    enzo_float * pz   = 0;
+    enzo_float * pvx  = 0;
+    enzo_float * pvy  = 0;
+    enzo_float * pvz  = 0;
+    int64_t * is_copy = 0;
+    
+    // Set random seed
+    srand(random_seed_);
+    
+    // Compute the mass of each star particle
+    
+    const double cell_volume = hx*hy*hz;
+
+    const double particle_mass = density_ * cell_volume;
+
+
+    // Check how many entries in mask are true
+    int n_true = 0;
+    for (int k = 0; k < nx*ny*nz; k++){
+      if (mask[k]) n_true++;
+    }
+    
+    // Loop over active cells
+    
+    for (int iz = 0; iz < nz; iz++){
+      const double z = bzm + (iz + 0.5)*hz;
+      for (int iy = 0; iy < ny; iy++){
+	const double y = bym + (iy + 0.5)*hy;
+	for (int ix = 0; ix < nx; ix++){
+	  const double x = bxm + (ix + 0.5)*hx;
+	  
+	  const int i = ix + nx*(iy + ny*iz);
+
+	  if (mask[i]) {
+	    double rnumx = 0.1 * hx * (double(rand())) / (double(RAND_MAX));
+	    double rnumy = 0.1 * hy * (double(rand())) / (double(RAND_MAX));
+	    double rnumz = 0.1 * hz * (double(rand())) / (double(RAND_MAX));
+	    
+	    if (ipb == 0) {
+	      
+	      // Get pointers to particle attribute arrays
+	      pmass = (enzo_float *) particle.attribute_array(it, ia_m, ib);
+	      px    = (enzo_float *) particle.attribute_array(it, ia_x, ib);
+	      py    = (enzo_float *) particle.attribute_array(it, ia_y, ib);
+	      pz    = (enzo_float *) particle.attribute_array(it, ia_z, ib);
+	      pvx   = (enzo_float *) particle.attribute_array(it, ia_vx, ib);
+	      pvy   = (enzo_float *) particle.attribute_array(it, ia_vy, ib);
+	      pvz   = (enzo_float *) particle.attribute_array(it, ia_vz, ib);
+	      is_copy   = (int64_t *) particle.attribute_array(it, ia_copy, ib);
+	    }
+	    
+	    // Now assign values to attributes
+	    pmass[ipb*dm] = particle_mass;
+	    px[ipb*dp] = x + rnumx;
+	    py[ipb*dp] = y + rnumy;
+	    pz[ipb*dp] = z + rnumz;
+	    pvx[ipb*dp] = drift_velocity_[0];
+	    pvy[ipb*dp] = drift_velocity_[1];
+	    pvz[ipb*dp] = drift_velocity_[2];
+	    is_copy[ipb*dloc] = 0;
+	    
+	    ipb++;
+	    
+	    if (ipb == npb){
+	      ipb = 0;
+	      ib++;
+	    }
+	    
+	  } // if (mask)
+	  
+	} // ix
+      } // iy
+    } // iz
+  } // if (n_particles > 0)
+  
+  delete [] mask;
+  
   return;
 }
