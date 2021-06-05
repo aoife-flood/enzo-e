@@ -28,6 +28,7 @@ EnzoInitialCollapseStars::EnzoInitialCollapseStars
   truncation_radius_ = enzo_config->initial_collapse_stars_truncation_radius;
   density_ = enzo_config->initial_collapse_stars_density;
   random_seed_ = enzo_config->initial_collapse_stars_random_seed;
+  offset_factor_ = enzo_config->initial_collapse_stars_offset_factor;
 }
 
 void EnzoInitialCollapseStars::pup (PUP::er &p)
@@ -43,6 +44,7 @@ void EnzoInitialCollapseStars::pup (PUP::er &p)
   p | truncation_radius_;
   p | density_;
   p | random_seed_;
+  p | offset_factor_;
 }
 
 void EnzoInitialCollapseStars::enforce_block
@@ -219,9 +221,12 @@ void EnzoInitialCollapseStars::enforce_block
 	  const int i = ix + nx*(iy + ny*iz);
 
 	  if (mask[i]) {
-	    double rnumx = 0.1 * hx * (double(rand())) / (double(RAND_MAX));
-	    double rnumy = 0.1 * hy * (double(rand())) / (double(RAND_MAX));
-	    double rnumz = 0.1 * hz * (double(rand())) / (double(RAND_MAX));
+	    double rnumx = offset_factor_ * hx *
+	      ((double(rand())) / (double(RAND_MAX)) - 0.5);
+	    double rnumy = offset_factor_ * hy *
+	      ((double(rand())) / (double(RAND_MAX)) - 0.5);
+	    double rnumz = offset_factor_ * hz *
+	      ((double(rand())) / (double(RAND_MAX)) - 0.5);
 	    
 	    if (ipb == 0) {
 	      

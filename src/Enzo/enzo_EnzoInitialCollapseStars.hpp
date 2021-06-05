@@ -60,6 +60,10 @@ public: // interface
 
   /// The random seed used to choose the cells hosting a star particle
   double random_seed_;
+
+  /// Particle positions are offset by a random number, uniformly distributed
+  /// between +/- 0.5 * offset_factor_ * cell_width
+  double offset_factor_;
 };
 
 #endif /* ENZO_ENZO_INITIAL_COLLAPSE_HPP */
