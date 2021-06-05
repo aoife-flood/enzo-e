@@ -472,9 +472,17 @@ bool EnzoMethodMergeStars::particles_in_neighbouring_blocks_
 	break; // break out of the k loop
       }  
     } // k loop
+    
+    if (return_val == 0){
 
-    if (return_val == 0) break; // break out of the j loop
+      // Print information about the offending particles
+      CkPrintf("(px1, py1, pz1) = (%g,%g,%g) \n"
+	       "(px1, py2, pz2) = (%g,%g,%g) \n",
+	       px1,py1,pz1,px2,py2,pz2);
+      
+      break; // break out of the j loop
+      }
   }
-  
+
   return return_val;
 }
