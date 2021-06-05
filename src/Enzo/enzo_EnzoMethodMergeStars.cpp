@@ -335,8 +335,7 @@ void EnzoMethodMergeStars::compute_(Block * block)
   cello::simulation()->data_delete_particles(delete_count);
       
 #ifdef DEBUG_MERGESTARS
-  CkPrintf("After merging, ngroups = %d, num_particles = %d \n", ngroups,
-	   particle.num_particles(it));
+  CkPrintf("After merging, num_particles = %d \n", particle.num_particles(it));
 #endif
   return;
       
@@ -470,19 +469,13 @@ bool EnzoMethodMergeStars::particles_in_neighbouring_blocks_
       if (pz2 < -0.5 && pz1 > 0.5){
 	return_val = 0;
 	break; // break out of the k loop
-      }  
+      }
+      
     } // k loop
     
-    if (return_val == 0){
+    if (return_val == 0) break; // break out of the j loop
 
-      // Print information about the offending particles
-      CkPrintf("(px1, py1, pz1) = (%g,%g,%g) \n"
-	       "(px1, py2, pz2) = (%g,%g,%g) \n",
-	       px1,py1,pz1,px2,py2,pz2);
-      
-      break; // break out of the j loop
-      }
-  }
-
+  } // j loop
+  
   return return_val;
 }

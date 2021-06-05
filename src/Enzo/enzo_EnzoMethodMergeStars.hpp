@@ -51,8 +51,6 @@ protected: // methods
 
   void compute_(Block * block);
 
-  bool any_local_particles_(EnzoBlock * enzo_block,int it);
-
   void get_particle_coordinates_block_units_
                                 (EnzoBlock * enzo_block, int it,
                                 double * particle_coordinates_block_units,
@@ -61,7 +59,6 @@ protected: // methods
   bool particles_in_neighbouring_blocks_(double * particle_coordinates,
 					int ** group_lists,int * group_sizes,
 					int i);
-  bool particle_in_block_(int i,  EnzoBlock * enzo_block, int it);
   
 protected: // attributes
 
