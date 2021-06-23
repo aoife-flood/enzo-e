@@ -15,7 +15,7 @@
 #include "FofLib.hpp"
 #include <time.h>
 
-#define DEBUG_MERGESTARS
+//#define DEBUG_MERGESTARS
 int FofList(int, enzo_float *, enzo_float, int *, int **, int ***);
 
 EnzoMethodMergeStars::EnzoMethodMergeStars()
