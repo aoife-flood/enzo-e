@@ -16,6 +16,8 @@
 #include <time.h>
 
 //#define DEBUG_MERGESTARS
+#define DEBUG_MERGESTARS_MOMENTUM
+
 int FofList(int, enzo_float *, enzo_float, int *, int **, int ***);
 
 EnzoMethodMergeStars::EnzoMethodMergeStars()
@@ -160,7 +162,7 @@ void EnzoMethodMergeStars::compute_(Block * block)
   
   for (int i = 0; i < ngroups; i++){
 #ifdef DEBUG_MERGESTARS
-    CkPrintf("Group %d out of %d on block %s: Group size = %d \n",i, ngroups,
+    CkPrintf("Group %d out of %d on block %s: Group size = %d \n",i+1, ngroups,
 	     block->name().c_str(),group_size[i]);
 #endif 
     if (group_size[i] > 1){
@@ -211,7 +213,8 @@ void EnzoMethodMergeStars::compute_(Block * block)
 	       "particle batch index = %d. Mass = %g. Position = (%g,%g,%g)\n",
 	       i,ngroups, block->name().c_str(),group_list[i][0],ib1,ip1,
 	       pmass1,px1,py1,pz1);
-#endif 
+#endif
+
       
       // now loop over the rest of the particles in this group, and merge
       // them in to the first particle
@@ -243,6 +246,18 @@ void EnzoMethodMergeStars::compute_(Block * block)
 	enzo_float plifetime2 = plifetime[ip2*dl];
 	enzo_float pcreation2 = pcreation[ip2*dc];
 	enzo_float pmetal2 = pmetal[ip2*dmf];
+
+#ifdef DEBUG_MERGESTARS_MOMENTUM
+	double old_momentum_x1 = pmass1 * pvx1;
+	double old_momentum_y1 = pmass1 * pvy1;
+	double old_momentum_z1 = pmass1 * pvz1;
+	double old_momentum_x2 = pmass2 * pvx2;
+	double old_momentum_y2 = pmass2 * pvy2;
+	double old_momentum_z2 = pmass2 * pvz2;
+	double total_old_momentum_x = old_momentum_x1 + old_momentum_x2;
+	double total_old_momentum_y = old_momentum_y1 + old_momentum_y2;
+	double total_old_momentum_z = old_momentum_z1 + old_momentum_z2;
+#endif
 	
 	enzo_float f1 = pmass1 / (pmass1 + pmass2);
 	enzo_float f2 = 1.0 - f1;	  
@@ -268,6 +283,20 @@ void EnzoMethodMergeStars::compute_(Block * block)
 		 "is merged into 0th particle. New properties of 0th particle: "
 		 "Mass = %g. Position = (%g,%g,%g)\n",
 		 j,i,ngroups, block->name().c_str(),pmass1,px1,py1,pz1);
+#endif
+
+#ifdef DEBUG_MERGESTARS_MOMENTUM
+	double new_momentum_x = pmass1 * pvx1;
+	double new_momentum_y = pmass1 * pvy1;
+	double new_momentum_z = pmass1 * pvz1;
+	CkPrintf("Old momentum 1 = (%g,%g,%g) \n"
+		 "Old momentum 2 = (%g,%g,%g) \n"
+		 "Old momentum Total = (%g,%g,%g) \n"
+		 "New Momentum = (%g,%g,%g) \n",
+		 old_momentum_x1,old_momentum_y1,old_momentum_z1,
+		 old_momentum_x2,old_momentum_y2,old_momentum_z2,
+		 total_old_momentum_x,total_old_momentum_y,total_old_momentum_z,
+		 new_momentum_x,new_momentum_y,new_momentum_z);
 #endif
 
 	// To mark this particle for deletion after it has been merged into
