@@ -369,7 +369,6 @@ void Hierarchy::get_folded_position
   if (rank >= 2){
     if (periodic_y){
       domain_width = upper_[1] - lower_[1];
-      CkPrintf("x[1] = %g \n", x[1]);
       n = std::floor((x[1] - lower_[1])/domain_width);
       folded_x[1] = x[1] - n*domain_width;
     }
@@ -378,7 +377,6 @@ void Hierarchy::get_folded_position
   if (rank >= 3){
     if (periodic_z){
       domain_width = upper_[2] - lower_[2];
-      CkPrintf("x[2] = %g \n" ,x[2]);
       n = std::floor((x[2] - lower_[2])/domain_width);
       folded_x[2] = x[2] - n*domain_width;
     }
