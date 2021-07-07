@@ -64,6 +64,10 @@ public: // interface
   /// Particle positions are offset by a random number, uniformly distributed
   /// between +/- 0.5 * offset_factor_ * cell_width
   double offset_factor_;
+
+  /// The initial speed of the particles, directed radially. Positive / negative
+  /// values correspond to inwards / outwards directed velocities.
+  double infall_speed_;
 };
 
 #endif /* ENZO_ENZO_INITIAL_COLLAPSE_HPP */

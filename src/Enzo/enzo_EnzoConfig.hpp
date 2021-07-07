@@ -176,6 +176,7 @@ public: // interface
       initial_collapse_stars_density(0.0),
       initial_collapse_stars_random_seed(123),
       initial_collapse_stars_offset_factor(0.1),
+      initial_collapse_stars_infall_speed(0.0),
       
       // EnzoGrackleTest
 #ifdef CONFIG_USE_GRACKLE
@@ -527,6 +528,7 @@ public: // attributes
   double                     initial_collapse_stars_density;
   int                        initial_collapse_stars_random_seed;
   double                     initial_collapse_stars_offset_factor;
+  double                     initial_collapse_stars_infall_speed;
 
   /// EnzoGrackleTest
 #ifdef CONFIG_USE_GRACKLE

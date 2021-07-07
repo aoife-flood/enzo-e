@@ -84,6 +84,7 @@ EnzoConfig::EnzoConfig() throw ()
   initial_collapse_stars_density(0.0),
   initial_collapse_stars_random_seed(123),
   initial_collapse_stars_offset_factor(0.1),
+  initial_collapse_stars_infall_speed(0.0),
   
   // EnzoInitialGrackleTest
 #ifdef CONFIG_USE_GRACKLE
@@ -434,6 +435,7 @@ void EnzoConfig::pup (PUP::er &p)
   p | initial_collapse_stars_density;
   p | initial_collapse_stars_random_seed;
   p | initial_collapse_stars_offset_factor;
+  p | initial_collapse_stars_infall_speed;
 
 #ifdef CONFIG_USE_GRACKLE
   p | initial_grackle_test_minimum_H_number_density;
@@ -1042,6 +1044,8 @@ void EnzoConfig::read(Parameters * p) throw()
     p->value_integer("Initial:collapse_stars:random_seed",123);
   initial_collapse_stars_offset_factor =
     p->value_float("Initial:collapse_stars:offset_factor",0.1);
+  initial_collapse_stars_infall_speed =
+    p->value_float("Initial:collapse_stars:infall_speed",0.0);
 
   // Grackle test initialization
 #ifdef CONFIG_USE_GRACKLE

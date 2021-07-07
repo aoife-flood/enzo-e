@@ -24,11 +24,12 @@ EnzoInitialCollapseStars::EnzoInitialCollapseStars
   drift_velocity_[0] = enzo_config->initial_collapse_stars_drift_velocity[0];
   drift_velocity_[1] = enzo_config->initial_collapse_stars_drift_velocity[1];
   drift_velocity_[2] = enzo_config->initial_collapse_stars_drift_velocity[2];
-    
+
   truncation_radius_ = enzo_config->initial_collapse_stars_truncation_radius;
   density_ = enzo_config->initial_collapse_stars_density;
   random_seed_ = enzo_config->initial_collapse_stars_random_seed;
   offset_factor_ = enzo_config->initial_collapse_stars_offset_factor;
+  infall_speed_ = enzo_config->initial_collapse_stars_infall_speed;
 }
 
 void EnzoInitialCollapseStars::pup (PUP::er &p)
@@ -45,6 +46,7 @@ void EnzoInitialCollapseStars::pup (PUP::er &p)
   p | density_;
   p | random_seed_;
   p | offset_factor_;
+  p | infall_speed_;
 }
 
 void EnzoInitialCollapseStars::enforce_block
@@ -125,6 +127,9 @@ void EnzoInitialCollapseStars::enforce_block
   // Mask for whether cells contain a particle
   bool * mask = new bool[nx*ny*nz];
 
+  // Array to contain infall velocities for each cell
+  double * infall_velocity = new double[3*nx*ny*nz];
+
   // Count number of particles
   int n_particles = 0;
   for (int iz = 0; iz < nz; iz++){
@@ -142,6 +147,12 @@ void EnzoInitialCollapseStars::enforce_block
 	  (npi[0] - centre_[0]) * (npi[0] - centre_[0]) +
 	  (npi[1] - centre_[1]) * (npi[1] - centre_[1]) +
 	  (npi[2] - centre_[2]) * (npi[2] - centre_[2]);
+
+	// Infall velocity is a vector of magnitude equal to infall_speed_
+	// directed towards the centre of collapse
+	infall_velocity[3*i]   = infall_speed_ * (centre_[0] - npi[0]) / sqrt(r2);
+	infall_velocity[3*i+1] = infall_speed_ * (centre_[1] - npi[1]) / sqrt(r2);
+	infall_velocity[3*i+2] = infall_speed_ * (centre_[2] - npi[2]) / sqrt(r2);
 	
 	if (r2 < truncation_radius_ * truncation_radius_){
 	  mask[i] = true;
@@ -246,9 +257,9 @@ void EnzoInitialCollapseStars::enforce_block
 	    px[ipb*dp] = x + rnumx;
 	    py[ipb*dp] = y + rnumy;
 	    pz[ipb*dp] = z + rnumz;
-	    pvx[ipb*dp] = drift_velocity_[0];
-	    pvy[ipb*dp] = drift_velocity_[1];
-	    pvz[ipb*dp] = drift_velocity_[2];
+	    pvx[ipb*dp] = drift_velocity_[0] + infall_velocity[3*i];
+	    pvy[ipb*dp] = drift_velocity_[1] + infall_velocity[3*i+1];
+	    pvz[ipb*dp] = drift_velocity_[2] + infall_velocity[3*i+2];
 	    is_copy[ipb*dloc] = 0;
 	    
 	    ipb++;
@@ -266,6 +277,7 @@ void EnzoInitialCollapseStars::enforce_block
   } // if (n_particles > 0)
   
   delete [] mask;
+  delete [] infall_velocity;
   
   return;
 }
