@@ -1,0 +1,101 @@
+ Adapt : {
+     max_level = 0;
+     min_level = 0;
+ }
+
+ Boundary : {
+     type = "periodic";
+ }
+
+ Domain : {
+     lower = ( -6.172000000000000e+24, -6.172000000000000e+24, -6.172000000000000e+24 );
+     rank = 3;
+     upper = ( 6.172000000000000e+24, 6.172000000000000e+24, 6.172000000000000e+24 );
+ }
+
+ Field : {
+     alignment = 8;
+     courant = 0.3000000000000000;
+     diffusion = true;
+     dual_energy = true;
+     gamma = 1.000000100000000;
+     ghost_depth = 4;
+     history = 1;
+     list = ( "density", "velocity_x", "velocity_y", "velocity_z", "acceleration_x", "acceleration_y", "acceleration_z", "total_energy", "internal_energy", "pressure", "density_total", "density_particle", "density_particle_accumulate", "potential", "density_gas", "X", "B", "X_copy", "B_copy", "potential_copy", "diagonal" );
+     padding = 0;
+ }
+
+ Initial : {
+     collapse_stars : {
+         centre = ( 1.543000000000000e+24, 1.543000000000000e+24, 1.543000000000000e+24 );
+         density = 1.840000000000000e-27;
+         drift_velocity = ( 0.000000000000000, 0.000000000000000, 0.000000000000000 );
+         infall_speed = 63000000.00000000;
+         offset_factor = 0.1000000000000000;
+         truncation_radius = 3.086000000000000e+24;
+     };
+     list = ( "collapse_stars" );
+ }
+
+ Mesh : {
+     root_blocks = ( 4, 4, 4 );
+     root_rank = 3;
+     root_size = ( 64, 64, 64 );
+ }
+
+ Method : {
+     gravity : {
+         solver = "bcg";
+     };
+     list = ( "pm_update", "merge_stars" );
+     merge_stars : {
+         merging_radius_cells = 0.3000000000000000;
+     };
+     pm_update : {
+         max_dt = 100000000000000.0;
+     };
+ }
+
+ Output : {
+     data : {
+         dir = ( "./Dir_Collapse-STARS_%04d", "cycle" );
+         field_list = ( "acceleration_x", "acceleration_y", "acceleration_z", "density_total", "potential" );
+         name = ( "data-%04d-%04d.h5", "cycle", "proc" );
+         particle_list = ( "star" );
+         schedule : {
+             step = 1000000000000000.;
+             var = "time";
+         };
+         type = "data";
+     };
+     list = ( "data" );
+ }
+
+ Particle : {
+     batch_size = 20000;
+     list = ( "star" );
+     star : {
+         attributes = ( "x", "double", "y", "double", "z", "double", "vx", "double", "vy", "double", "vz", "double", "ax", "double", "ay", "double", "az", "double", "mass", "double", "prevmass", "double", "creation_time", "double", "lifetime", "double", "metal_fraction", "double", "accretion_rate", "double", "accretion_rate_time", "double", "class", "int32", "timeindex", "int32", "is_copy", "int64" );
+         group_list = "has_mass";
+         position = ( "x", "y", "z" );
+         velocity = ( "vx", "vy", "vz" );
+     };
+ }
+
+ Solver : {
+     bcg : {
+         iter_max = 200;
+         monitor_iter = 1;
+         precondition = "diagonal_D";
+         res_tol = 0.01000000000000000;
+         type = "bicgstab";
+     };
+     diagonal : {
+         type = "diagonal";
+     };
+     list = ( "bcg", "diagonal" );
+ }
+
+ Stopping : {
+     time = 4.890000000000000e+16;
+ }

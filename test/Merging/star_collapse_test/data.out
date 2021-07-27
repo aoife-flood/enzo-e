@@ -1,0 +1,11 @@
+/home/aoife/anaconda3/lib/python3.8/_collections_abc.py:666: MatplotlibDeprecationWarning: The global colormaps dictionary is no longer considered public API.
+  self[key]
+yt : [INFO     ] 2021-07-22 15:54:55,491 mpi4py was not found. Disabling parallel computation
+Traceback (most recent call last):
+  File "data.py", line 51, in <module>
+    ts =  yt.DatasetSeries("%s/Dir_Collapse-STARS_????/Dir_Collapse-STARS_????.block_list" %args["data_directory"])
+  File "/home/aoife/anaconda3/lib/python3.8/site-packages/yt/data_objects/time_series.py", line 158, in __new__
+    outputs = get_filenames_from_glob_pattern(outputs)
+  File "/home/aoife/anaconda3/lib/python3.8/site-packages/yt/data_objects/time_series.py", line 84, in get_filenames_from_glob_pattern
+    raise YTOutputNotIdentified(filenames, {})
+yt.utilities.exceptions.YTOutputNotIdentified: Supplied ('.', '/', 'D', 'i', 'r', '_', 'C', 'o', 'l', 'l', 'a', 'p', 's', 'e', '-', 'S', 'T', 'A', 'R', 'S', '_', '?', '?', '?', '?', '/', 'D', 'i', 'r', '_', 'C', 'o', 'l', 'l', 'a', 'p', 's', 'e', '-', 'S', 'T', 'A', 'R', 'S', '_', '?', '?', '?', '?', '.', 'b', 'l', 'o', 'c', 'k', '_', 'l', 'i', 's', 't') {}, but could not load!
