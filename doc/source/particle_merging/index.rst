@@ -3,28 +3,6 @@
 Particle Merging
 ***********************
 ..
- Variables in input file
- #######################
-
-
- -------
- Initial
- -------
-
-
- The :p:`Initial` group is used to specify initial conditions.  :p:`cycle` specifies the initial cycle number (usually 0), :p:`list` #s\
- pecifies a list of initial conditions, which may include ``"value"`` for initializing fields directly, or other problem-specific ini#t\
- ial condition generators.
-
-..
- .. include:: initial.incl
-
- ------
- Method
- ------
-
-  .. include:: method.incl
-
  Parameters
  ##########
  Domain
@@ -57,9 +35,22 @@ Particle Merging
  * merging_radius_cells = 1.0
 
    This determines how close star particles have to get to merge, the numerical value refers to cells rather than any physical unit.
+Merging Star Particles Tests
+############################
 
-Tests
-#####
+These tests run an idealised setup of a uniform spherical distribution of star particles, which collapse under their own gravity and merge together. They are run using either gravity solvers or a constant radial infall velocity applied to all particles. The purpose of these tests is to check if momentum and mass are conserved throughout the merging process.
+
+..
+ Parameters:
+ * Set in the parameters file "star_collapse_test.in"
+
+ * Domain
+   * lower = [ -2.0e17, -2.0e17, -2.0e17];
+    
+   * rank = 3;
+    
+   * upper = [ 2.0e17, 2.0e17, 2.0e17 ];   
+
 How to run tests:
 
 * Change the parameters file.
@@ -100,6 +91,7 @@ How to run tests:
     +--------------+--------------+--------------+------+------------------+------+
     
   * A graph of Mass, Normalised momentum and No. of particles VS Time/Collapse Time. (output of data.py)
+    Momentum in these graphs is the magnitude of the total momentum normalised by dividing by (G*M^3)/R or M*S depending on whether gravity or infall speed is used, where G is the universal gravitational constant, M is the total mass, R is the radius and s is infall speed.
 
     .. figure:: Mass_momentum_particles_graph_0_3centreofblock.png
           :width: 590px
