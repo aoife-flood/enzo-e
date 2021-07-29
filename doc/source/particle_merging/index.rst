@@ -2,56 +2,39 @@
 ***********************
 Particle Merging
 ***********************
-..
- Parameters
- ##########
- Domain
- * lower = [ -2.0e17, -2.0e17, -2.0e17];
 
- * rank = 3;
-
- * upper = [ 2.0e17, 2.0e17, 2.0e17 ];
-
- Initial
-
- * Infall_speed
-
- * centre = [0.0,0.0,0.0];
-
- * drift_velocity = [1.0,0.0,0.0];
-
- * truncation_radius = 5.0e16;
-
- * density = 1.0e-19;
-
- Method 
-
- * list = [ "pm_deposit", "gravity", "pm_update","merge_stars"];
-   * To turn off gravity remove "gravity" and
-   * To turn off merging remove "merge_stars" from list
-
- * max_dt = 1e12
-
- * merging_radius_cells = 1.0
-
-   This determines how close star particles have to get to merge, the numerical value refers to cells rather than any physical unit.
 Merging Star Particles Tests
 ############################
 
 These tests run an idealised setup of a uniform spherical distribution of star particles, which collapse under their own gravity and merge together. They are run using either gravity solvers or a constant radial infall velocity applied to all particles. The purpose of these tests is to check if momentum and mass are conserved throughout the merging process.
 
-..
- Parameters:
- * Set in the parameters file "star_collapse_test.in"
+Parameters
+**********
 
- * Domain
-   * lower = [ -2.0e17, -2.0e17, -2.0e17];
-    
-   * rank = 3;
-    
-   * upper = [ 2.0e17, 2.0e17, 2.0e17 ];   
+Initial
 
-How to run tests:
+ * Infall_speed: Constant radial velocity directed towards the centre of collapse that is applied to all particles
+
+ * centre: The centre of collapse and the centre of the sphere.
+
+ * drift_velocity: Additional velocity that can be added to the star particles.
+
+ * truncation_radius: The radius of the sphere of star paticles.
+
+Method 
+
+ * list = [ "pm_deposit", "gravity", "pm_update","merge_stars"];
+
+   * To turn off gravity remove "gravity" and "pm_deposit" from list.
+
+   * To turn off merging remove "merge_stars" from list.
+
+
+ * merging_radius_cells: Determines how close star particles have to get to merge, the numerical value refers to cells rather than any physical unit.
+
+
+How to run tests
+****************
 
 * Change the parameters file.
   
@@ -106,7 +89,7 @@ How to run tests:
 
 
 Test 1
-######
+******
 
 For the first test, merging is turned off to check that momentum and mass are conserved.
 
@@ -130,17 +113,17 @@ For the first test, merging is turned off to check that momentum and mass are co
 For the rest of the tests merging is turned on, so "merge_stars" should be added back into Method: list in the parameters file.
 
 Test 2
-######
+******
 
 For this test gravity is turned off, the centre of the collapse is positioned in the centre of a block to ensure any errors are not coming from errors in particles being copied across blocks, and the truncation radius is made very small so that there are fewer particles. Momentum and mass should be conserved, the particle number should decrease.
 
 * Remove "pm _deposit" and "gravity" from Method: list in the parameters file.
 
-* Set Initial: infall_speed to
+* Set Initial: infall_speed to a suitable value that will allow all particles to reach the centre by the end of the stopping time.
 
-* Set collapse_centre in Initial to be [] in parameters file.
+* Set collapse_centre in Initial to be [3.086e24, 3.0856e24, 3.086e24] in parameters file.
 
-* Set upper/lower bounds in Domain to be [] in parameters file.
+* Set upper/lower bounds in Domain to be [12.344e24,12.344e24,12.344e24] and [-12.344e24,-12.344e24,-12.344e24] in parameters file.
 
 * Set truncation_radius in Initial to be 3.0e23 in parameters file.
 
@@ -160,7 +143,7 @@ For this test gravity is turned off, the centre of the collapse is positioned in
     Graph of Momentum, Mass and No. of particles VS Time with gravity off and small truncation radius in one block
 
 Test 3
-######
+******
 
 Test 3 is like test 2 but with a larger truncation radius and more particles. It should show similar results to test 2. Momentum and mass should be conserved, the particle number should decrease.
 
@@ -182,13 +165,13 @@ Test 3 is like test 2 but with a larger truncation radius and more particles. It
     Graph of Momentum, Mass and No. of particles VS Time with gravity off and large truncation radius in one block
 
 Test 4
-######
+******
 
 For this test, the same set up is used, but the collapse centre is changed so that the collapse and merging will take place across blocks. If the results of this test differ greatly from the previous test it will mean there is a problem occuring when particles are being copied across blocks. Momentum and mass should be conserved, the particle number should decrease.
 
-* Set collapse_centre in Initial to be [] in parameters file.
+* Set collapse_centre in Initial to be [0.0,0.0,0.0] in parameters file.
 
-* Set upper/lower bounds in Domain to be [] in parameters file.
+* Set upper/lower bounds in Domain to be [6.172e24, 6.172e24, 6.172e24] in parameters file.
 
 * Run test using "nohup ./run.sh"
 
@@ -207,7 +190,7 @@ For this test, the same set up is used, but the collapse centre is changed so th
 
 
 Test 5
-######
+******
 
 For this test gravity is turned back on, momentum and mass should still be conserved and the results should be similar to the previous test.
 
@@ -230,7 +213,7 @@ For this test gravity is turned back on, momentum and mass should still be conse
 
 
 Test 6
-######
+******
 
 For this the drift velocity is changed to a non-zero number to check that momentum and mass are still conserved.
 
