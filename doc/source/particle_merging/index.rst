@@ -69,9 +69,9 @@ How to run tests
 
     The data in the file is in the form:
     
-    +--------------+--------------+--------------+------+------------------+------+
-    | X velocities | Y velocities | Z velocities | Mass | No. of particles | Time |
-    +--------------+--------------+--------------+------+------------------+------+
+    +--------------+--------------+--------------+------+------------------+---------------------+------+
+    | X velocities | Y velocities | Z velocities | Mass | No. of particles | Normalised Momentum | Time |
+    +--------------+--------------+--------------+------+------------------+---------------------+------+
     
   * A graph of Mass, Normalised momentum and No. of particles VS Time/Collapse Time. (output of data.py)
     Momentum in these graphs is the magnitude of the total momentum normalised by dividing by (G*M^3)/R or M*S depending on whether gravity or infall speed is used, where G is the universal gravitational constant, M is the total mass, R is the radius and s is infall speed.
