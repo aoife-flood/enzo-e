@@ -41,14 +41,17 @@ with io.open(args["data_directory"] + "/" + args["parameter_file"],
              encoding = "utf-8") as f:
     params = cp.load(f)
 
+#Get merge radius to use for file name
 Merge_radius = str(params.Method.merge_stars.merging_radius_cells)
 filename="merge_data_"+Merge_radius+".txt"
 
+#Get parameters from param file
 infall_speed=params.Initial.collapse_stars.infall_speed
 t_collapse=params.Stopping.time
 method_list=params.Method.list
 radius=params.Initial.collapse_stars.truncation_radius
 
+#Check if file already exists for this test and delete it
 if os.path.isfile(filename)== True:
     os.remove(filename)
 
@@ -56,6 +59,8 @@ yt.enable_parallelism()
 ts =  yt.DatasetSeries("%s/Dir_Collapse-STARS_????/Dir_Collapse-STARS_????.block_list" %args["data_directory"])
 
 storage = {}
+
+#arrays for total velocities, masses and number of particles at each time step
 vvx=[]
 vvy=[]
 vvz=[]
@@ -63,6 +68,7 @@ t_mass=[]
 time=[]
 t_particles=[]
 
+#Getting total velocities and mass for each timestep from directories
 for ds in ts.piter():
 
     box = ds.box(left_edge = -ds.domain_width/2.0,right_edge = ds.domain_width/2.0)
@@ -88,7 +94,7 @@ M=t_mass[0]
 p=[]
 t=[]
 
-#Check if gravity is on                                                                                                              
+#Check if gravity is on to determine how to normalise momentum                                                                                                             
                                                                                                                                       
 if 'gravity' in method_list:
     N=((G*(M**3))/radius)**(1/2)
@@ -101,7 +107,7 @@ for i in range(len(t_mass)):
     t.append(time[i]/t_collapse)
 
 
-
+#Plot Mass, No. of Particles and Momentum VS Time on 3 different subplots
 fig, (ax1, ax2, ax3) = plt.subplots(3, figsize=[10,8], sharex=True)
 
 fig.suptitle("Mass, Momentum and No. of Particles VS Time")
