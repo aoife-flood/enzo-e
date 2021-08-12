@@ -3,13 +3,33 @@
 """
 Created on Thu Jul 22 14:12:49 2021
 
-@author: aoife
+@author: Aoife Flood
+Description:
+           This program takes files named "merge_data_XX.txt" output by data.py and uses the to create plots of mass, no. of particles and momentum for multiple merge radii.
 """
 import os.path
 import matplotlib.pyplot as plt
 
 
 def getmomentum(filename):
+    """
+    This function opens a file and puts the data in it into arrays
+    
+    Parameters
+    ----------
+    filename: string
+    
+    Returns
+    -------
+    p         : array
+        array for the magnitude of the momentum
+    particles : array
+        array for the number of particles
+    t         : array
+        array for time/collapse time
+    mass      : array
+        array for total mass at each time interval
+    """
     in_file = open(filename, 'r')#Open file to read
     t_collapse=4.8987e16
     G=6.67e-8  
@@ -20,6 +40,7 @@ def getmomentum(filename):
     vx=[]
     vy=[]
     vz=[]
+    p=[]
     for line in in_file:
         values=line.split()#split columns
         vx.append(float(values[0]))
@@ -27,18 +48,12 @@ def getmomentum(filename):
         vz.append(float(values[2]))
         mass.append(float(values[3]))
         particles.append(float(values[4]))
-        time.append(float(values[5]))
+        p.append(float(values[5]))
+        time.append(float(values[6]))
 
     in_file.close()
 
-    M=mass[0]
-    p=[]
-    t=[]
-    GMR=((G*(M)**3)/R)**(1/2)
-    for i in range(len(mass)):
-        p.append(((vx[i]**2+vy[i]**2+vz[i]**2)**(1/2)*mass[i])/GMR)
-        t.append(time[i]/t_collapse)
-    return p, particles, t, mass
+    return p, particles, time, mass
 
 
 
@@ -46,7 +61,7 @@ def getmomentum(filename):
 rad=0.1
 data=[]
 radii=[]
-for i in range(10):
+for i in range(20):
     
     radstr=str(rad)
     filename="merge_data_"+radstr+".txt"
